@@ -448,7 +448,7 @@ Ledger entry template:
 - Rollback:
   - delete startup file from Windows Startup folder.
 - GitHub push status:
-  - pending current commit/push.
+  - SUCCESS (included in commit `630a98e`, pushed to `origin/main`).
 
 ---
 
