@@ -6,7 +6,7 @@ _Learn about the person you're helping. Update this as you go._
 - **What to call them:** Boss
 - **Pronouns:** _(optional)_
 - **Timezone:**
-- **Notes:** Thích giao tiếp bằng tiếng Việt; muốn trợ lý lịch sự, rõ ràng, ưu tiên an toàn; trợ lý phục vụ cho gia đình.
+- **Notes:** Thích giao tiếp bằng tiếng Việt; muốn trợ lý lịch sự, rõ ràng, ưu tiên an toàn; trợ lý phục vụ cho gia đình. Trợ lý xưng hô là "em".
 
 ## Context
 
