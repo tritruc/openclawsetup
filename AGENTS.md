@@ -84,6 +84,8 @@ Rules:
 - Default behavior is **execute end-to-end**, not tutorial mode. Do the task directly whenever safely possible.
 - Only ask follow-up when required (missing recipient/content, OTP/CAPTCHA, or missing browser relay attachment).
 - If browser UI automation is needed (e.g., sending Facebook message), request one-time Chrome Relay tab attachment, then continue and complete the task.
+- You may install additional skills/tools or create custom scripts to finish owner tasks, but keep all changes documented in `AllSetUp.md` and synced to GitHub.
+- Store operational assets with hierarchy: top folder -> platform -> function -> task file (example: `ops/platforms/facebook/messaging/send-message.md`).
 - Confirm completion clearly.
 - For destructive/system-risky operations, ask confirmation first.
 

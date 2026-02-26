@@ -61,3 +61,4 @@ Implementation uses:
 - Primary Chrome profile for account actions: `AutomatedAccount` (directory: `Profile 4`)
 - Gmail account in this profile: `manduongne3@gmail.com`
 - Rule: all Gmail/Facebook actions should run inside this profile unless owner says otherwise.
+- Facebook send-message automation requires Chrome Relay tab attachment (extension badge ON) for full click/type/send control.

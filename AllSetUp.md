@@ -193,6 +193,29 @@ cp scripts/OpenClaw-Autostart.bat "/mnt/c/Users/ADMIN/AppData/Roaming/Microsoft/
 
 This ensures OpenClaw gateway starts automatically when Windows user logs in.
 
+## 3.10 Task asset hierarchy + execution skill
+
+Use this hierarchy for all operation assets:
+
+```text
+ops/
+  platforms/
+    <platform>/
+      <function>/
+        <task-file>
+```
+
+Current examples:
+
+- `ops/platforms/facebook/messaging/send-message.md`
+- `ops/platforms/gmail/actions/open-gmail.md`
+- `ops/platforms/youtube/search/open-youtube-search.md`
+
+Custom workspace skill for execution-first behavior:
+
+- `skills/family-exec/SKILL.md`
+- `skills/family-exec/references/facebook-messaging-playbook.md`
+
 ---
 
 ## 4) GitHub sync setup (mandatory for this workflow)
@@ -514,6 +537,38 @@ Ledger entry template:
   - rule text present in AGENTS/AllSetUp.
 - Rollback:
   - revert corresponding commit.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
+### 2026-02-26 14:33 UTC — Add platform/function/task hierarchy + custom execution skill
+- Why: owner requested stronger completion behavior and structured storage for all automation assets.
+- Commands:
+  - create hierarchy folders:
+    - `ops/platforms/facebook/messaging/`
+    - `ops/platforms/gmail/actions/`
+    - `ops/platforms/youtube/search/`
+  - add task files:
+    - `ops/platforms/facebook/messaging/send-message.md`
+    - `ops/platforms/gmail/actions/open-gmail.md`
+    - `ops/platforms/youtube/search/open-youtube-search.md`
+  - create custom skill:
+    - `skills/family-exec/SKILL.md`
+    - `skills/family-exec/references/facebook-messaging-playbook.md`
+  - verify skill discovery: `openclaw skills list`
+- Files/paths touched:
+  - `ops/...`
+  - `skills/family-exec/...`
+  - `AGENTS.md`
+  - `USER.md`
+  - `AllSetUp.md`
+  - `memory/2026-02-26.md`
+- Capability impact:
+  - assistant now has explicit execution-first skill for local actions + Facebook messaging flow.
+  - reusable structure for future scripts/tasks by platform and function.
+- Verification:
+  - `openclaw skills list` shows `family-exec` with source `openclaw-workspace`.
+- Rollback:
+  - remove new `ops/` + `skills/family-exec/` folders and revert commit.
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
