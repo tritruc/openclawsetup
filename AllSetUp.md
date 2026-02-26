@@ -142,11 +142,14 @@ Create helper scripts in workspace:
 
 - `scripts/open_url.sh`
 - `scripts/open_youtube_search.sh`
+- `scripts/open_chrome_profile_url.sh`
+- `scripts/open_gmail.sh`
+- `scripts/open_facebook.sh`
 
 Make executable:
 
 ```bash
-chmod +x scripts/open_url.sh scripts/open_youtube_search.sh
+chmod +x scripts/open_url.sh scripts/open_youtube_search.sh scripts/open_chrome_profile_url.sh scripts/open_gmail.sh scripts/open_facebook.sh
 ```
 
 Usage examples:
@@ -154,12 +157,21 @@ Usage examples:
 ```bash
 scripts/open_url.sh "https://www.youtube.com"
 scripts/open_youtube_search.sh "karaoke con bướm xinh"
+scripts/open_chrome_profile_url.sh "https://mail.google.com" "AutomatedAccount"
+scripts/open_gmail.sh
+scripts/open_facebook.sh
 ```
+
+Account/profile binding:
+
+- Chrome profile for owner account: `AutomatedAccount` (directory: `Profile 4`)
+- Account email in profile: `manduongne3@gmail.com`
+- Rule: Gmail/Facebook actions default to `AutomatedAccount` unless owner overrides.
 
 Implementation opens Windows apps through:
 
 - `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
-- `Start-Process '<url>'`
+- `Start-Process` for URL/Chrome profile launch
 
 ## 3.9 Auto-start OpenClaw on Windows login (WSL host)
 
@@ -449,6 +461,36 @@ Ledger entry template:
   - delete startup file from Windows Startup folder.
 - GitHub push status:
   - SUCCESS (included in commit `630a98e`, pushed to `origin/main`).
+
+### 2026-02-26 14:05 UTC — Bind Gmail/Facebook actions to Chrome profile `AutomatedAccount`
+- Why: owner confirmed Gmail + Facebook are logged in under profile name `AutomatedAccount`.
+- Commands:
+  - scan profiles from Chrome Local State (`.../User Data/Local State`)
+  - update scripts:
+    - `scripts/open_chrome_profile_url.sh` (resolve profile by name -> profile directory)
+    - `scripts/open_gmail.sh`
+    - `scripts/open_facebook.sh`
+  - test:
+    - `scripts/open_gmail.sh`
+    - `scripts/open_facebook.sh`
+- Files/paths touched:
+  - `scripts/open_chrome_profile_url.sh`
+  - `scripts/open_gmail.sh`
+  - `scripts/open_facebook.sh`
+  - `AGENTS.md`
+  - `TOOLS.md`
+  - `USER.md`
+  - `AllSetUp.md`
+- Capability impact:
+  - Gmail/Facebook actions now default to profile name `AutomatedAccount` (mapped to `Profile 4`).
+  - More robust profile handling even if directory mapping changes.
+- Verification:
+  - output confirms profile resolution:
+    - `Opened in Chrome profile [Profile 4] (hint: AutomatedAccount): ...`
+- Rollback:
+  - revert these script/doc changes and restore fixed profile directory behavior.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
 
 ---
 

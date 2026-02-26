@@ -74,9 +74,13 @@ When owner asks to operate their machine (e.g., "mở YouTube trên máy"), exec
 
 - `scripts/open_url.sh "<url>"`
 - `scripts/open_youtube_search.sh "<query>"`
+- `scripts/open_chrome_profile_url.sh "<url>" "<profile_dir>"`
+- `scripts/open_gmail.sh`
+- `scripts/open_facebook.sh`
 
 Rules:
 - Prefer helper scripts over ad-hoc shell snippets.
+- For Gmail/Facebook, default to owner profile `AutomatedAccount` (`Profile 4`, `manduongne3@gmail.com`) unless owner overrides.
 - Confirm completion clearly.
 - For destructive/system-risky operations, ask confirmation first.
 

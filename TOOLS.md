@@ -45,7 +45,19 @@ Add whatever helps you do your job. This is your cheat sheet.
   - `scripts/open_url.sh "https://example.com"`
 - Open YouTube search directly on Windows desktop:
   - `scripts/open_youtube_search.sh "karaoke con bướm xinh"`
+- Open URL in a specific Chrome profile (name or directory):
+  - `scripts/open_chrome_profile_url.sh "https://example.com" "AutomatedAccount"`
+- Open Gmail in owner profile:
+  - `scripts/open_gmail.sh`
+- Open Facebook in owner profile:
+  - `scripts/open_facebook.sh`
 
 Implementation uses:
 - `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
 - Command: `Start-Process '<url>'`
+
+### Web accounts (owner preference)
+
+- Primary Chrome profile for account actions: `AutomatedAccount` (directory: `Profile 4`)
+- Gmail account in this profile: `manduongne3@gmail.com`
+- Rule: all Gmail/Facebook actions should run inside this profile unless owner says otherwise.
