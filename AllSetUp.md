@@ -168,6 +168,12 @@ Account/profile binding:
 - Account email in profile: `manduongne3@gmail.com`
 - Rule: Gmail/Facebook actions default to `AutomatedAccount` unless owner overrides.
 
+Execution policy:
+
+- Prefer end-to-end execution (do task directly), avoid tutorial-style responses.
+- For Facebook actions requiring UI clicks (search person, send message), use Chrome Relay automation.
+- If Chrome Relay is not attached, request one-time attachment (click OpenClaw Browser Relay icon on the active tab), then continue task automatically.
+
 Implementation opens Windows apps through:
 
 - `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
@@ -489,6 +495,25 @@ Ledger entry template:
     - `Opened in Chrome profile [Profile 4] (hint: AutomatedAccount): ...`
 - Rollback:
   - revert these script/doc changes and restore fixed profile directory behavior.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
+### 2026-02-26 14:11 UTC — Enforce execution-first behavior for Telegram tasks
+- Why: owner reported assistant gave guidance instead of finishing requested Facebook task.
+- Commands:
+  - update behavior rules in `AGENTS.md` (execute end-to-end by default)
+  - update `AllSetUp.md` execution policy for Gmail/Facebook tasks
+- Files/paths touched:
+  - `AGENTS.md`
+  - `AllSetUp.md`
+  - `memory/2026-02-26.md`
+- Capability impact:
+  - assistant prioritizes doing the task directly; asks follow-up only when technically required.
+  - formalized Chrome Relay requirement for full Facebook UI automation.
+- Verification:
+  - rule text present in AGENTS/AllSetUp.
+- Rollback:
+  - revert corresponding commit.
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 

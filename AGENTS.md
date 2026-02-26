@@ -81,6 +81,9 @@ When owner asks to operate their machine (e.g., "mở YouTube trên máy"), exec
 Rules:
 - Prefer helper scripts over ad-hoc shell snippets.
 - For Gmail/Facebook, default to owner profile `AutomatedAccount` (`Profile 4`, `manduongne3@gmail.com`) unless owner overrides.
+- Default behavior is **execute end-to-end**, not tutorial mode. Do the task directly whenever safely possible.
+- Only ask follow-up when required (missing recipient/content, OTP/CAPTCHA, or missing browser relay attachment).
+- If browser UI automation is needed (e.g., sending Facebook message), request one-time Chrome Relay tab attachment, then continue and complete the task.
 - Confirm completion clearly.
 - For destructive/system-risky operations, ask confirmation first.
 
