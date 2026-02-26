@@ -391,7 +391,7 @@ Ledger entry template:
 - Rollback:
   - N/A.
 - GitHub push status:
-  - pending current commit/push.
+  - SUCCESS (included in commit `ded71c4`, pushed to `origin/main`).
 
 ### 2026-02-26 12:35 UTC — Add local machine action scripts (open URL / YouTube search)
 - Why: allow owner to ask via chat to open content on their machine (example: YouTube karaoke).
@@ -413,7 +413,7 @@ Ledger entry template:
 - Rollback:
   - remove scripts and revert docs/config commits.
 - GitHub push status:
-  - pending current commit/push.
+  - SUCCESS (included in commit `ded71c4`, pushed to `origin/main`).
 
 ---
 
