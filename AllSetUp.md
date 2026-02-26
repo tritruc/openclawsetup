@@ -325,7 +325,11 @@ Ledger entry template:
   - `git remote remove origin`
   - rename branch back if needed: `git branch -M master`
 - GitHub push status:
-  - pending current attempt.
+  - FAILED: `fatal: could not read Username for 'https://github.com': No such device or address`
+  - Fix required:
+    1. `gh auth login` (HTTPS, GitHub.com, authenticate this machine)
+    2. verify: `gh auth status`
+    3. retry: `git push -u origin main`
 
 ---
 
