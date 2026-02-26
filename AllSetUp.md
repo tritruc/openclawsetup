@@ -629,6 +629,25 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-26 15:06 UTC — Add login automation script for Gmail + Facebook (AutoHotkey)
+- Why: owner requested direct auto-login execution instead of manual steps.
+- Commands:
+  - create script: `scripts/windows/login_google_facebook.ahk`
+  - create wrapper: `scripts/run_login_google_facebook_ahk.sh`
+  - test run with owner-provided runtime credentials (not persisted)
+- Files/paths touched:
+  - `scripts/windows/login_google_facebook.ahk`
+  - `scripts/run_login_google_facebook_ahk.sh`
+  - `TOOLS.md`, `AllSetUp.md`, `memory/2026-02-26.md`
+- Capability impact:
+  - assistant can trigger best-effort auto-login workflow for Gmail/Facebook in owner Chrome profile.
+- Verification:
+  - wrapper executes without runtime script error.
+- Rollback:
+  - remove the 2 scripts and revert docs.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)

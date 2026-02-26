@@ -70,3 +70,6 @@ Implementation uses:
   - Smoke test: `source .venv-camoufox/bin/activate && python scripts/camoufox_smoke_test.py`
 - AutoHotkey (Windows user install):
   - `/mnt/c/Users/ADMIN/AppData/Local/Programs/AutoHotkey/v2/AutoHotkey64.exe`
+  - Login automation wrapper:
+    - `scripts/run_login_google_facebook_ahk.sh "<gmail>" "<gmail_pass>" "<fb_user>" "<fb_pass>"`
+  - Note: credentials are runtime-only; do not write them to repo/docs.
