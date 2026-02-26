@@ -572,6 +572,30 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-26 14:41 UTC — Fix Chrome stray tab bug (`0.0.0.4`) for profile launch
+- Why: owner reported incorrect tabs opening (`0.0.0.4`) when launching Facebook/Gmail.
+- Root cause:
+  - Chrome profile arg contained space (`Profile 4`) and was not quoted robustly in PowerShell `Start-Process` argument string.
+  - This caused argument splitting and stray navigation.
+- Commands:
+  - patch `scripts/open_chrome_profile_url.sh` to build fully quoted arg string:
+    - `--profile-directory="Profile 4" --new-tab "<url>"`
+  - test:
+    - `scripts/open_facebook.sh`
+    - `scripts/open_gmail.sh`
+- Files/paths touched:
+  - `scripts/open_chrome_profile_url.sh`
+  - `AllSetUp.md`
+  - `memory/2026-02-26.md`
+- Capability impact:
+  - Facebook/Gmail open command is now deterministic with `AutomatedAccount` profile.
+- Verification:
+  - scripts execute successfully and no new malformed URL is emitted by launcher.
+- Rollback:
+  - revert script to previous version (not recommended).
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)

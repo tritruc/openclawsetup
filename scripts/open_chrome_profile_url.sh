@@ -69,7 +69,9 @@ fi
 PROFILE_ESC=${PROFILE_DIR//\'/\'\'}
 URL_ESC=${URL//\'/\'\'}
 
-PS_CMD="Start-Process -FilePath '$CHROME_WIN_PATH' -ArgumentList @('--profile-directory=$PROFILE_ESC','--new-tab','$URL_ESC')"
+# IMPORTANT: quote profile value because names like "Profile 4" contain spaces.
+# Without this, Chrome may mis-parse and open stray tabs like http://0.0.0.4/
+PS_CMD="\$p='$PROFILE_ESC'; \$u='$URL_ESC'; \$c='$CHROME_WIN_PATH'; \$args='--profile-directory=\"' + \$p + '\" --new-tab \"' + \$u + '\"'; Start-Process -FilePath \$c -ArgumentList \$args"
 "$POWERSHELL" -NoProfile -Command "$PS_CMD"
 
 echo "Opened in Chrome profile [$PROFILE_DIR] (hint: $PROFILE_HINT): $URL"
