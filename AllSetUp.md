@@ -307,6 +307,26 @@ Ledger entry template:
     2. `gh auth login`
     3. `git push -u origin master`
 
+### 2026-02-26 12:22 UTC — Connect repository to GitHub + publish branch
+- Why: user provided GitHub repository URL for immediate sync workflow.
+- Commands:
+  - `git remote add origin https://github.com/tritruc/openclawsetup.git`
+  - `git branch -M main`
+  - `git push -u origin main`
+- Files/paths touched:
+  - local git metadata (`.git/config`, branch refs)
+- Capability impact:
+  - enables immediate commit+push automation for future setup/config changes.
+- Verification:
+  - `git remote -v`
+  - `git branch --show-current` -> `main`
+  - `git push -u origin main` succeeds.
+- Rollback:
+  - `git remote remove origin`
+  - rename branch back if needed: `git branch -M master`
+- GitHub push status:
+  - pending current attempt.
+
 ---
 
 ## 7) Secret handling checklist (do not skip)
