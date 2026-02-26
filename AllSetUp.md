@@ -161,6 +161,20 @@ Implementation opens Windows apps through:
 - `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
 - `Start-Process '<url>'`
 
+## 3.9 Auto-start OpenClaw on Windows login (WSL host)
+
+Template file in repo:
+
+- `scripts/OpenClaw-Autostart.bat`
+
+Copy template to Windows Startup folder:
+
+```bash
+cp scripts/OpenClaw-Autostart.bat "/mnt/c/Users/ADMIN/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/OpenClaw-Autostart.bat"
+```
+
+This ensures OpenClaw gateway starts automatically when Windows user logs in.
+
 ---
 
 ## 4) GitHub sync setup (mandatory for this workflow)
@@ -414,6 +428,27 @@ Ledger entry template:
   - remove scripts and revert docs/config commits.
 - GitHub push status:
   - SUCCESS (included in commit `ded71c4`, pushed to `origin/main`).
+
+### 2026-02-26 12:38 UTC — Add Windows Startup autostart bridge for OpenClaw
+- Why: ensure OpenClaw starts automatically on Windows login, not only when WSL session is manually started.
+- Commands:
+  - create template: `scripts/OpenClaw-Autostart.bat`
+  - copy to startup folder:
+    - `cp scripts/OpenClaw-Autostart.bat "/mnt/c/Users/ADMIN/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/OpenClaw-Autostart.bat"`
+  - startup command inside batch:
+    - `wsl.exe -d Ubuntu -- bash -lc "systemctl --user start openclaw-gateway.service"`
+- Files/paths touched:
+  - `scripts/OpenClaw-Autostart.bat`
+  - Windows startup folder batch file (outside repo)
+  - `AllSetUp.md`
+- Capability impact:
+  - gateway auto-starts at Windows login, enabling Telegram control quickly after boot.
+- Verification:
+  - batch file exists and command is valid.
+- Rollback:
+  - delete startup file from Windows Startup folder.
+- GitHub push status:
+  - pending current commit/push.
 
 ---
 
