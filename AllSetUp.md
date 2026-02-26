@@ -596,6 +596,39 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-26 14:56 UTC — Evaluate Camoufox + install fallback automation engine
+- Why: owner requested trying Camoufox / other apps to reduce UI control limitations.
+- Commands:
+  - create venv: `python3 -m venv .venv-camoufox`
+  - install packages: `source .venv-camoufox/bin/activate && pip install camoufox playwright`
+  - fetch browser: `camoufox fetch`
+  - smoke test: `python scripts/camoufox_smoke_test.py`
+  - install AutoHotkey on Windows user: `winget install --id AutoHotkey.AutoHotkey -e --accept-source-agreements --accept-package-agreements`
+  - add fallback scripts/docs:
+    - `scripts/windows/facebook_send_message.ahk`
+    - `scripts/run_facebook_send_ahk.sh`
+    - `ops/platforms/facebook/messaging/autohotkey-fallback.md`
+    - `ops/platforms/facebook/messaging/camoufox-evaluation.md`
+- Files/paths touched:
+  - `.venv-camoufox/` (local environment)
+  - Windows user install path for AutoHotkey
+  - scripts and ops docs listed above
+  - `AGENTS.md`, `TOOLS.md`, `AllSetUp.md`, `memory/2026-02-26.md`
+- Capability impact:
+  - Camoufox engine available for separate Firefox-based automation profile.
+  - AutoHotkey fallback available for UI-level keyboard automation when Relay is unavailable.
+- Verification:
+  - `camoufox version` shows package and binary versions.
+  - smoke test returns Facebook page title.
+  - `winget list AutoHotkey` shows installed user package.
+- Rollback:
+  - remove venv `.venv-camoufox`
+  - `camoufox remove`
+  - uninstall AutoHotkey via `winget uninstall AutoHotkey.AutoHotkey`
+  - remove fallback scripts/docs.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)

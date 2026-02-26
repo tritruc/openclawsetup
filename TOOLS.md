@@ -61,4 +61,12 @@ Implementation uses:
 - Primary Chrome profile for account actions: `AutomatedAccount` (directory: `Profile 4`)
 - Gmail account in this profile: `manduongne3@gmail.com`
 - Rule: all Gmail/Facebook actions should run inside this profile unless owner says otherwise.
-- Facebook send-message automation requires Chrome Relay tab attachment (extension badge ON) for full click/type/send control.
+- Facebook send-message automation primary mode: Chrome Relay (extension badge ON on attached tab).
+- Fallback mode: AutoHotkey UI automation via `scripts/run_facebook_send_ahk.sh`.
+
+### Automation engines (installed)
+
+- Camoufox environment (workspace-local): `.venv-camoufox`
+  - Smoke test: `source .venv-camoufox/bin/activate && python scripts/camoufox_smoke_test.py`
+- AutoHotkey (Windows user install):
+  - `/mnt/c/Users/ADMIN/AppData/Local/Programs/AutoHotkey/v2/AutoHotkey64.exe`
