@@ -301,7 +301,11 @@ Ledger entry template:
 - Rollback:
   - revert commit.
 - GitHub push status:
-  - pending current push attempt.
+  - FAILED: `fatal: No configured push destination.`
+  - Fix required:
+    1. `git remote add origin <GITHUB_REPO_URL>`
+    2. `gh auth login`
+    3. `git push -u origin master`
 
 ---
 
