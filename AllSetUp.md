@@ -648,6 +648,30 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-26 15:20 UTC — Handle Messenger PIN recovery popup in AHK fallback
+- Why: owner reported Messenger requested PIN recovery code and blocked message send flow.
+- Commands:
+  - patch `scripts/windows/facebook_send_message.ahk`:
+    - maximize window
+    - send multiple `Esc` to dismiss modal
+    - click sidebar search, locate recipient, open conversation
+    - click composer and send message
+  - re-run fallback sender:
+    - `scripts/run_facebook_send_ahk.sh "Dương Công Mãn" "hahaha"`
+- Files/paths touched:
+  - `scripts/windows/facebook_send_message.ahk`
+  - `ops/platforms/facebook/messaging/autohotkey-fallback.md`
+  - `AllSetUp.md`
+  - `memory/2026-02-26.md`
+- Capability impact:
+  - better resilience when PIN-recovery modal appears before sending.
+- Verification:
+  - command executes without script runtime error.
+- Rollback:
+  - revert script to prior simpler version.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)

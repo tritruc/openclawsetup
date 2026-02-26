@@ -8,28 +8,46 @@ if (A_Args.Length < 2) {
 recipient := A_Args[1]
 msg := A_Args[2]
 
+CoordMode "Mouse", "Screen"
+
 chrome := "C:\Program Files\Google\Chrome\Application\chrome.exe"
 Run '"' chrome '" --profile-directory="Profile 4" --new-tab "https://www.facebook.com/messages/"'
 
-if !WinWaitActive("Facebook",, 15) {
+if !WinWaitActive("Facebook",, 20) {
     MsgBox "Facebook window not active"
     ExitApp 2
 }
 
-Sleep 2000
-Send "{Esc}" ; dismiss popup if any
-Sleep 300
+WinMaximize "A"
+Sleep 3000
 
-; Messenger search (best effort)
-Send "^k"
-Sleep 700
+; Close PIN recovery modal / popups if present
+Loop 3 {
+    Send "{Esc}"
+    Sleep 350
+}
+
+; Focus Messenger search box (left panel)
+Click 210, 235
+Sleep 400
+Send "^a"
+Sleep 100
+Send "{Backspace}"
+Sleep 100
 SendText recipient
-Sleep 500
+Sleep 1000
 Send "{Enter}"
 Sleep 2200
 
+; Open first matched conversation if needed
+Send "{Enter}"
+Sleep 1200
+
+; Focus message composer and send
+Click 620, 835
+Sleep 350
 SendText msg
-Sleep 300
+Sleep 200
 Send "{Enter}"
 
 ExitApp 0
