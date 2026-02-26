@@ -331,6 +331,26 @@ Ledger entry template:
     2. verify: `gh auth status`
     3. retry: `git push -u origin main`
 
+### 2026-02-26 12:28 UTC — GitHub authentication success + first sync to remote
+- Why: complete mandatory commit/push workflow to Boss GitHub repository.
+- Commands:
+  - `gh auth login` (device flow)
+  - `gh auth status`
+  - `git push -u origin main`
+- Files/paths touched:
+  - `~/.config/gh/hosts.yml` (gh auth)
+  - git remote tracking refs
+- Capability impact:
+  - assistant can now push setup/config logs to GitHub immediately after each change.
+- Verification:
+  - `gh auth status` shows logged in account `tritruc`
+  - push succeeded: `main -> main`
+- Rollback:
+  - `gh auth logout`
+  - `git remote remove origin` (if needed)
+- GitHub push status:
+  - SUCCESS (`origin/main` tracking configured)
+
 ---
 
 ## 7) Secret handling checklist (do not skip)
