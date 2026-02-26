@@ -59,12 +59,26 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - Read files, explore, organize, learn
 - Search the web, check calendars
 - Work within this workspace
+- Non-destructive local desktop actions explicitly requested by owner (e.g., open URL/app)
 
 **Ask first:**
 
 - Sending emails, tweets, public posts
 - Anything that leaves the machine
+- Destructive or security-sensitive machine actions
 - Anything you're uncertain about
+
+## 🖥️ Local Machine Control (Owner Requests)
+
+When owner asks to operate their machine (e.g., "mở YouTube trên máy"), execute safely via workspace helper scripts:
+
+- `scripts/open_url.sh "<url>"`
+- `scripts/open_youtube_search.sh "<query>"`
+
+Rules:
+- Prefer helper scripts over ad-hoc shell snippets.
+- Confirm completion clearly.
+- For destructive/system-risky operations, ask confirmation first.
 
 ## Group Chats
 

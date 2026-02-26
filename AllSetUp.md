@@ -136,6 +136,31 @@ Expected:
 openclaw pairing approve telegram <PAIRING_CODE>
 ```
 
+## 3.8 Enable local desktop actions from chat (WSL -> Windows host)
+
+Create helper scripts in workspace:
+
+- `scripts/open_url.sh`
+- `scripts/open_youtube_search.sh`
+
+Make executable:
+
+```bash
+chmod +x scripts/open_url.sh scripts/open_youtube_search.sh
+```
+
+Usage examples:
+
+```bash
+scripts/open_url.sh "https://www.youtube.com"
+scripts/open_youtube_search.sh "karaoke con bướm xinh"
+```
+
+Implementation opens Windows apps through:
+
+- `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
+- `Start-Process '<url>'`
+
 ---
 
 ## 4) GitHub sync setup (mandatory for this workflow)
@@ -350,6 +375,45 @@ Ledger entry template:
   - `git remote remove origin` (if needed)
 - GitHub push status:
   - SUCCESS (`origin/main` tracking configured)
+
+### 2026-02-26 12:34 UTC — Verify OpenClaw auto-start on boot/session
+- Why: user requested OpenClaw to run automatically when machine starts.
+- Commands:
+  - `openclaw gateway status`
+  - `systemctl --user is-enabled openclaw-gateway.service`
+  - `systemctl --user is-active openclaw-gateway.service`
+- Files/paths touched:
+  - none (verification only)
+- Capability impact:
+  - confirmed gateway user service is `enabled` + `active`.
+- Verification:
+  - status output shows systemd enabled and running.
+- Rollback:
+  - N/A.
+- GitHub push status:
+  - pending current commit/push.
+
+### 2026-02-26 12:35 UTC — Add local machine action scripts (open URL / YouTube search)
+- Why: allow owner to ask via chat to open content on their machine (example: YouTube karaoke).
+- Commands:
+  - create `scripts/open_url.sh`
+  - create `scripts/open_youtube_search.sh`
+  - `chmod +x scripts/open_url.sh scripts/open_youtube_search.sh`
+  - test: `scripts/open_youtube_search.sh "karaoke con bướm xinh"`
+- Files/paths touched:
+  - `scripts/open_url.sh`
+  - `scripts/open_youtube_search.sh`
+  - `AGENTS.md`
+  - `TOOLS.md`
+  - `AllSetUp.md`
+- Capability impact:
+  - assistant can open URLs and YouTube searches on Windows desktop from WSL host.
+- Verification:
+  - script output: `Opened on Windows host: <url>`.
+- Rollback:
+  - remove scripts and revert docs/config commits.
+- GitHub push status:
+  - pending current commit/push.
 
 ---
 
