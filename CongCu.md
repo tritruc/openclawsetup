@@ -145,6 +145,16 @@ Mỗi thay đổi ảnh hưởng hệ thống phải thêm vào mục **Change L
 - Kiểm tra: đọc lại `AGENTS.md`, `CongCu.md`, `USER.md`.
 - Rollback: revert commit tương ứng.
 
+### 2026-02-26 12:12 UTC — GitHub push attempt (FAILED)
+- Lệnh: `git push`
+- Kết quả: `fatal: No configured push destination.`
+- Ảnh hưởng: thay đổi đã commit local nhưng chưa sync lên GitHub.
+- Cách xử lý ngay:
+  1. `git remote add origin <GITHUB_REPO_URL>`
+  2. `gh auth login` (hoặc cấu hình PAT)
+  3. `git push -u origin master`
+- Rollback: không cần (không thay đổi remote).
+
 ---
 
 ## 6) Trạng thái GitHub sync

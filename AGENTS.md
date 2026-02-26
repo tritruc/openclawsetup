@@ -207,9 +207,14 @@ Think of it like a human reviewing their journal and updating their mental model
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
 
-## 📒 System Change Log + GitHub Sync (CongCu.md)
+## 📒 System Change Log + GitHub Sync (AllSetUp.md)
 
-Whenever you perform a **system-affecting change**, you must document it in `CongCu.md` and sync to GitHub.
+Whenever you perform a **system-affecting change**, you must document it in `AllSetUp.md` and sync to GitHub.
+
+**Canonical file:** `AllSetUp.md`
+
+- `AllSetUp.md` is the source of truth for full environment setup/rebuild.
+- `CongCu.md` is optional compatibility/summary notes; never replace `AllSetUp.md`.
 
 **System-affecting changes include:**
 
@@ -220,7 +225,7 @@ Whenever you perform a **system-affecting change**, you must document it in `Con
 
 **Required workflow (no skipping):**
 
-1. Update `CongCu.md` with:
+1. Append change entry to `AllSetUp.md` with:
    - UTC timestamp
    - What changed + why
    - Exact commands run
@@ -228,10 +233,10 @@ Whenever you perform a **system-affecting change**, you must document it in `Con
    - Impact on capabilities
    - Verification result
    - Rollback steps
-2. Keep `CongCu.md` as a reproducible setup guide for a fresh OpenClaw machine.
-3. Commit documentation changes with clear commit messages.
-4. Push to GitHub after each system-affecting change.
-5. If push fails (missing remote/auth/network), report immediately and include the exact fix needed.
+2. Keep `AllSetUp.md` reproducible from scratch (fresh machine playbook).
+3. Commit changes immediately after each system-affecting action.
+4. Push to GitHub immediately after commit.
+5. If push fails (missing remote/auth/network), report immediately and include exact fix steps.
 
 **Security rule:**
 
