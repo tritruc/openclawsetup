@@ -900,7 +900,7 @@ class ReminderEngine:
 
         reminders = self.store.query(
             """
-            SELECT r.*, t.thread_id, t.account_id, t.id as target_id
+            SELECT r.*, t.thread_id, t.phone, t.account_id, t.id as target_id
             FROM reminders r JOIN targets t ON t.id=r.target_id
             WHERE r.active=1 AND t.active=1 AND t.thread_id=? AND t.account_id=? AND r.require_date_ack=1
             """,
@@ -927,6 +927,56 @@ class ReminderEngine:
                     message_text=content[:500],
                     raw_json=payload,
                 )
+                self.send_ack_confirmation(r, local_date)
+
+    def send_ack_confirmation(self, reminder: Dict[str, Any], local_date: str):
+        reminder_id = int(reminder["id"])
+        target_id = int(reminder["target_id"])
+        account_id = reminder.get("account_id") or "default"
+        thread_id = str(reminder.get("thread_id") or "")
+        phone = (reminder.get("phone") or "").strip()
+        is_group = int(reminder.get("is_group", 0)) == 1
+
+        body = f"✅ Đã nhận xác nhận. Em sẽ dừng nhắc trong hôm nay ({local_date})."
+
+        result: RunResult
+        if phone and Path(ZALO_SEND_SH).exists():
+            result = run_cmd(["bash", ZALO_SEND_SH, phone, body], timeout=90)
+        else:
+            profile = "default"
+            acc = [a for a in self.store.get_accounts() if a["account_id"] == account_id]
+            if acc:
+                profile = acc[0].get("zca_profile") or "default"
+
+            cmd = [ZCA_BIN, "--profile", profile, "msg", "send", str(thread_id), body]
+            if is_group:
+                cmd.insert(-2, "--group")
+            result = run_cmd(cmd, timeout=45)
+
+            if not result.ok:
+                fallback_cmd = [OPENCLAW_BIN, "message", "send", "--channel", "zalouser", "--target", str(thread_id), "--message", body, "--account", account_id]
+                result = run_cmd(fallback_cmd, timeout=45)
+
+        if result.ok:
+            self.store.add_log(
+                "ack_confirm_send",
+                account_id=account_id,
+                reminder_id=reminder_id,
+                target_id=target_id,
+                local_date=local_date,
+                message_text=body,
+                raw_json={"stdout": result.stdout[:1000]},
+            )
+        else:
+            self.store.add_log(
+                "ack_confirm_error",
+                account_id=account_id,
+                reminder_id=reminder_id,
+                target_id=target_id,
+                local_date=local_date,
+                message_text=body,
+                error_text=(result.stderr or result.stdout or "Send failed")[:1000],
+            )
 
     def scheduler_loop(self):
         while not self.stop_event.is_set():

@@ -1040,3 +1040,23 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert app.py and set `start_date` to NULL for reminders if needed.
+
+## [2026-02-27 07:50:55 UTC] Auto-send confirmation after valid ACK reply
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py`:
+  - After detecting valid ACK reply, app now sends confirmation message:
+    - `✅ Đã nhận xác nhận. Em sẽ dừng nhắc trong hôm nay (YYYY-MM-DD).`
+  - Added `send_ack_confirmation()` with same transport strategy:
+    - prefer desktop automation (`run_zalo_send.sh`) when phone is available,
+    - fallback to `zca` and `openclaw message send`.
+  - Added log events: `ack_confirm_send`, `ack_confirm_error`.
+- Updated `apps/zalo-reminder-manager/README.md` to document confirmation message behavior.
+- Restarted `zalo-reminder-manager.service`.
+
+### Verification
+- `python3 -m py_compile apps/zalo-reminder-manager/app.py` OK.
+- service status: `active`.
+
+### Rollback
+- Revert app.py/README and restart service.

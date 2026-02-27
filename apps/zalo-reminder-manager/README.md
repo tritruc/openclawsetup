@@ -8,6 +8,7 @@ Web app quản lý nhắc hẹn Zalo chạy **độc lập như một service** 
 - Nhắc mỗi ngày theo giờ cố định (mặc định 08:00 Asia/Ho_Chi_Minh)
 - Nếu chưa xác nhận đúng cú pháp thì tự nhắc lại mỗi 30 phút
 - Khi người nhận trả lời đúng `ack_text` của reminder thì dừng nhắc trong hôm đó (mặc định: `ok`)
+- Sau khi nhận đúng ack, hệ thống gửi lại 1 tin xác nhận đã dừng nhắc trong ngày
 - `ack_text` có thể dùng biến `{date}` (ví dụ: `{date} đã xong`)
 - Ưu tiên gửi qua luồng desktop automation (script `run_zalo_send.sh`) để thao tác như người dùng thật
 - Nhật ký gửi/ack/lỗi
