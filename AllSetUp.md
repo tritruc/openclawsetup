@@ -907,3 +907,22 @@ Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\UltraVie
 powercfg /change standby-timeout-ac 30
 powercfg /change hibernate-timeout-ac 180
 ```
+
+## [2026-02-27 05:41:26 UTC] Added stable Zalo desktop send-message execution flow
+
+### What changed
+- Added runbook: `ops/platforms/zalo/messaging/send-message-phone.md`
+- Added PowerShell automation: `scripts/windows/zalo_send_message.ps1`
+- Added WSL wrapper: `scripts/run_zalo_send.sh`
+
+### Capability impact
+- Agent can execute a repeatable Zalo send flow (search by phone -> open chat -> paste message -> send -> before/after proof screenshots).
+
+### Verification
+- Flow validated in live session by sending messages and capturing before/after screenshots.
+
+### Rollback
+- Remove files:
+  - `ops/platforms/zalo/messaging/send-message-phone.md`
+  - `scripts/windows/zalo_send_message.ps1`
+  - `scripts/run_zalo_send.sh`
