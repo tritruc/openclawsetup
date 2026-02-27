@@ -1104,3 +1104,23 @@ systemctl --user restart zalo-reminder-manager.service
 ### Verification
 - `run_zalo_check_ack.sh ...` now reports `ACK_FOUND=0` when only old history is present.
 - Service restarted and active.
+
+## [2026-02-27 08:19:19 UTC] Final hardening for false-stop bug (OCR ACK)
+
+### What changed
+- Switched default ACK phrase to `ok đã xong` (longer, less OCR-noise-prone).
+- OCR checker now rejects too-short ack text (<4 chars), so `ok` alone is no longer accepted in OCR mode.
+- Added guard to prevent duplicate confirmation sends:
+  - `was_ack_confirmed_today()` checks `ack_confirm_send` log before sending confirm.
+- Updated UI default ack field and README defaults accordingly.
+- Updated reminder #1 ack_text to `ok đã xong`; reset today's ack/baseline state.
+
+### Why
+- Prevent false positives where historical/noisy OCR text containing `ok` caused premature stop.
+
+### Verification
+- app compiled and service restarted successfully.
+- reminder #1 now uses `ack_text='ok đã xong'`.
+
+### Rollback
+- Revert app.py / ocr_ack_check.js / README and restart service.

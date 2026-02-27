@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 APP_TZ = "Asia/Ho_Chi_Minh"
 DEFAULT_RETRY_MIN = 30
 DEFAULT_DAILY_TIME = "08:00"
-DEFAULT_ACK_TEXT = "ok"
+DEFAULT_ACK_TEXT = "ok đã xong"
 DB_PATH = Path(os.environ.get("ZALO_REMINDER_DB", Path(__file__).with_name("reminders.db")))
 OPENCLAW_BIN = os.environ.get("OPENCLAW_BIN", "/home/manduong/.nvm/versions/node/v24.13.1/bin/openclaw")
 ZCA_BIN = os.environ.get("ZCA_BIN", "zca")
@@ -106,7 +106,7 @@ INDEX_HTML = r"""
         <input id="rTime" type="time" value="08:00"/>
         <input id="rTz" value="Asia/Ho_Chi_Minh"/>
         <input id="rRetry" type="number" min="5" value="30" style="width:90px"/>
-        <input id="rAck" value="ok" placeholder="Reply để dừng (mặc định: ok)" style="min-width:220px"/>
+        <input id="rAck" value="ok đã xong" placeholder="Reply để dừng (mặc định: ok đã xong)" style="min-width:220px"/>
         <label><input id="rNeedAck" type="checkbox" checked/> Cần xác nhận</label>
         <label><input id="rActive" type="checkbox" checked/> Active</label>
       </div>
@@ -236,7 +236,7 @@ async function loadReminders(){
       <td>${esc(r.title)}</td>
       <td>${esc(r.target_name||'')}<br><span class='muted'>${esc(r.phone||'')}</span></td>
       <td>${esc(r.daily_time)}<br><span class='muted'>${esc(r.timezone)} · ${r.retry_interval_min}p</span></td>
-      <td>${esc((r.message_template||'').slice(0,120))}<br><span class='muted'>Ack: ${esc(r.ack_text||'ok')}</span></td>
+      <td>${esc((r.message_template||'').slice(0,120))}<br><span class='muted'>Ack: ${esc(r.ack_text||'ok đã xong')}</span></td>
       <td>${r.active? '✅':'❌'} ${r.require_date_ack? '<span class="pill">cần xác nhận</span>':''}</td>
       <td>
         <button class='secondary' onclick='pickReminder(${r.id})'>Sửa</button>
@@ -254,7 +254,7 @@ async function pickReminder(id){
   const r = rows.find(x=>x.id===id); if(!r) return;
   edit.reminderId=id;
   rTitle.value=r.title||''; rTarget.value=r.target_id; rTime.value=r.daily_time||'08:00'; rTz.value=r.timezone||'Asia/Ho_Chi_Minh'; rRetry.value=r.retry_interval_min||30;
-  rAck.value=r.ack_text||'ok'; rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
+  rAck.value=r.ack_text||'ok đã xong'; rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
 }
 
 async function saveReminder(){
@@ -272,7 +272,7 @@ async function saveReminder(){
   };
   if(!body.title || !body.target_id) return alert('Thiếu tên nhắc hẹn hoặc người nhận');
   await api('/api/reminders', {method:'POST', body: JSON.stringify(body)});
-  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rAck.value='ok'; rNeedAck.checked=true; rActive.checked=true;
+  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rAck.value='ok đã xong'; rNeedAck.checked=true; rActive.checked=true;
   await refreshAll();
 }
 
@@ -684,6 +684,13 @@ class Store:
             (reminder_id, local_date, int(user_ok_count), now, now),
         )
 
+    def was_ack_confirmed_today(self, reminder_id: int, local_date: str) -> bool:
+        rows = self.query(
+            "SELECT 1 FROM logs WHERE reminder_id=? AND event_type='ack_confirm_send' AND local_date=? LIMIT 1",
+            (reminder_id, local_date),
+        )
+        return bool(rows)
+
 
 @dataclass
 class RunResult:
@@ -958,6 +965,8 @@ class ReminderEngine:
 
     def send_ack_confirmation(self, reminder: Dict[str, Any], local_date: str):
         reminder_id = int(reminder["id"])
+        if self.store.was_ack_confirmed_today(reminder_id, local_date):
+            return
         target_id = int(reminder["target_id"])
         account_id = reminder.get("account_id") or "default"
         thread_id = str(reminder.get("thread_id") or "")

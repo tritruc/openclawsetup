@@ -31,16 +31,19 @@ function norm(s) {
   let found = false;
   let userOkCount = 0;
 
-  if (ackNorm === 'ok') {
-    const okCount = (t.match(/\bok\b/g) || []).length;
-    const hintCount = (t.match(/xac nhan hom nay\s*:?\s*ok/g) || []).length;
-    userOkCount = Math.max(0, okCount - hintCount);
-    found = userOkCount > 0;
-  } else {
-    const esc = ackNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    found = new RegExp(`(^|\\s)${esc}($|\\s)`).test(t);
-    userOkCount = found ? 1 : 0;
+  if (ackNorm.length < 4) {
+    // Too short for OCR-safe matching (e.g., "ok" is noisy).
+    console.log('ACK_FOUND=0');
+    console.log('USER_OK_COUNT=0');
+    console.log('REASON=ack_too_short_for_ocr');
+    console.log(`OCR_TEXT=${t.slice(0, 800)}`);
+    process.exit(0);
   }
+
+  const esc = ackNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const hits = t.match(new RegExp(`(^|\\s)${esc}($|\\s)`, 'g')) || [];
+  userOkCount = hits.length;
+  found = userOkCount > 0;
 
   console.log(`ACK_FOUND=${found ? 1 : 0}`);
   console.log(`USER_OK_COUNT=${userOkCount}`);
