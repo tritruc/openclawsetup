@@ -6,7 +6,7 @@ _Learn about the person you're helping. Update this as you go._
 - **What to call them:** Boss
 - **Pronouns:** _(optional)_
 - **Timezone:**
-- **Notes:** Thích giao tiếp bằng tiếng Việt; muốn trợ lý lịch sự, rõ ràng, ưu tiên an toàn; trợ lý phục vụ cho gia đình. Trợ lý xưng hô là "em". Ưu tiên phục vụ người lớn tuổi mờ mắt: trả lời ngắn, rõ, từng bước, dễ đọc. Mặc định thao tác Gmail/Facebook bằng Chrome profile `AutomatedAccount` (dir `Profile 4`) chứa account `manduongne3@gmail.com`. Muốn trợ lý hoàn thành tác vụ trực tiếp (execution-first), hạn chế trả lời kiểu hướng dẫn tự làm.
+- **Notes:** Thích giao tiếp bằng tiếng Việt; muốn trợ lý lịch sự, rõ ràng, ưu tiên an toàn; trợ lý phục vụ cho gia đình. Trợ lý xưng hô là "em". Ưu tiên phục vụ người lớn tuổi mờ mắt: trả lời ngắn, rõ, từng bước, dễ đọc. Mặc định thao tác Gmail/Facebook bằng Chrome profile `AutomatedAccount` (dir `Profile 4`) chứa account `manduongne3@gmail.com`. Muốn trợ lý hoàn thành tác vụ trực tiếp (execution-first), hạn chế trả lời kiểu hướng dẫn tự làm. Rule thêm: nếu có thể tự thao tác thì tự làm luôn, không yêu cầu Boss thao tác tay; khi cần lấy thông tin từ màn hình/app thì tự thử các cách (focus cửa sổ/chụp lại/mở đúng app) trước khi hỏi Boss.
 
 ## Context
 

@@ -842,3 +842,68 @@ Store secrets in:
 - environment variables, or
 - local OpenClaw config outside shared git repo, or
 - dedicated secret manager.
+
+## [2026-02-27 02:05:02 UTC] Remote access hardening for UltraViewer (autostart + watchdog + anti-sleep)
+
+### Why
+Boss yêu cầu đảm bảo luôn giữ quyền truy cập từ xa, giảm tối đa thao tác tay sau khi bật máy.
+
+### What changed
+1. Bật **tự khởi động UltraViewer** qua 2 lớp dự phòng:
+   - Registry `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (value `UltraViewer`)
+   - Startup shortcut: `C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\UltraViewer.lnk`
+2. Tạo **watchdog script** để tự mở lại UltraViewer nếu bị tắt:
+   - Script: `%APPDATA%\UltraViewer\watchdog-ultraviewer.ps1`
+3. Tạo **Scheduled Task** chạy watchdog mỗi 2 phút:
+   - Task: `UltraViewerWatchdog2Min`
+4. Tắt sleep/hibernate khi cắm điện để tránh mất kết nối:
+   - `standby-timeout-ac = 0`
+   - `hibernate-timeout-ac = 0`
+5. Cập nhật rule vận hành trong `USER.md`:
+   - Ưu tiên execution-first tuyệt đối; agent phải tự thử mọi cách trước khi yêu cầu Boss thao tác tay.
+
+### Exact commands run
+```bash
+# prepare and run PowerShell config script
+cat > /mnt/c/Users/ADMIN/AppData/Local/Temp/config_ultraviewer_remote.ps1 <<'PS1'
+# (script body created by agent; includes Run key, Startup link, watchdog, schtasks, powercfg)
+PS1
+/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Users\ADMIN\AppData\Local\Temp\config_ultraviewer_remote.ps1"
+
+# verify
+a) reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v UltraViewer
+b) schtasks /Query /TN UltraViewerWatchdog2Min
+c) powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE
+```
+
+### Files / config paths touched
+- `C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\UltraViewer.lnk`
+- `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (value: `UltraViewer`)
+- `%APPDATA%\UltraViewer\watchdog-ultraviewer.ps1`
+- Scheduled Task: `UltraViewerWatchdog2Min`
+- `/home/manduong/.openclaw/workspace/USER.md`
+
+### Capability impact
+- Khi user đăng nhập Windows, UltraViewer sẽ tự mở lại.
+- Nếu UltraViewer bị tắt ngoài ý muốn, watchdog sẽ tự bật lại trong tối đa ~2 phút.
+- Máy giảm nguy cơ rớt kết nối do sleep khi cắm sạc.
+
+### Verification result
+- `Run\UltraViewer` tồn tại và trỏ đúng exe.
+- Startup folder có `UltraViewer.lnk`.
+- Task `UltraViewerWatchdog2Min` tồn tại (`Ready`, có Next Run Time).
+- `STANDBYIDLE` AC = `0x00000000`.
+
+### Limitations / notes
+- Task ONLOGON thứ 2 (`UltraViewerWatchdogAtLogon`) bị `Access is denied`; không cần thiết vì đã có `Run` + Startup + watchdog định kỳ.
+- Thiết lập “mật khẩu UltraViewer cố định” chưa auto-set bằng CLI (UltraViewer không có API/CLI public ổn định). Có thể cần thao tác UI đúng cửa sổ app để chốt mật khẩu cố định.
+
+### Rollback
+```powershell
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v UltraViewer /f
+schtasks /Delete /TN "UltraViewerWatchdog2Min" /F
+Remove-Item "$env:APPDATA\UltraViewer\watchdog-ultraviewer.ps1" -Force
+Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\UltraViewer.lnk" -Force
+powercfg /change standby-timeout-ac 30
+powercfg /change hibernate-timeout-ac 180
+```
