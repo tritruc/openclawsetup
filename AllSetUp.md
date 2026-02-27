@@ -672,6 +672,62 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-27 00:55 UTC — Enable Zalo Personal stack (zalouser) + install zca CLI
+- Why: owner requested daily reminder automation on Zalo without OA.
+- Commands:
+  - `curl -fsSL https://get.zca-cli.dev/install.sh | bash`
+  - `zca --version`
+  - `~/.nvm/versions/node/v24.13.1/bin/openclaw plugins enable zalouser`
+  - `~/.nvm/versions/node/v24.13.1/bin/openclaw channels add --channel zalouser`
+  - `~/.nvm/versions/node/v24.13.1/bin/openclaw status`
+- Files/paths touched:
+  - `~/.local/bin/zca`
+  - `~/.openclaw/openclaw.json`
+  - `~/.openclaw/openclaw.json.bak`
+- Capability impact:
+  - machine now has `zca` binary available;
+  - OpenClaw Zalo Personal channel is configured/enabled (authentication still required).
+- Verification:
+  - `zca --version` => `0.0.24`
+  - `openclaw status` shows `Zalo Personal: ON` (state WARN until auth).
+- Rollback:
+  - disable plugin: `openclaw plugins disable zalouser`
+  - remove channel account: `openclaw channels remove --channel zalouser`
+  - uninstall zca: `curl -fsSL https://get.zca-cli.dev/install.sh | bash -s uninstall`
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
+### 2026-02-27 01:03 UTC — Create local web app for visual reminder management (ZaloUser)
+- Why: owner requested a direct visual app/web to view/edit/delete reminders, manage sender accounts, and track reminder status.
+- Commands:
+  - `mkdir -p apps/zalo-reminder-manager`
+  - create app server: `apps/zalo-reminder-manager/app.py`
+  - create launcher: `scripts/run_zalo_reminder_manager.sh`
+  - `chmod +x scripts/run_zalo_reminder_manager.sh`
+  - `python3 -m py_compile apps/zalo-reminder-manager/app.py`
+  - run app: `scripts/run_zalo_reminder_manager.sh`
+- Files/paths touched:
+  - `apps/zalo-reminder-manager/app.py`
+  - `apps/zalo-reminder-manager/README.md`
+  - `scripts/run_zalo_reminder_manager.sh`
+  - runtime DB: `apps/zalo-reminder-manager/reminders.db`
+- Capability impact:
+  - new web UI at `http://127.0.0.1:8799` for:
+    - account management (`account_id`, `zca profile`, self id)
+    - recipient management (name, phone, threadId, group flag)
+    - reminder CRUD (time, timezone, retry interval, ack requirement)
+    - scheduler loop + listener loop + logs
+  - supports rule: 08:00 GMT+7 reminder and retry every 30 minutes until valid date reply.
+- Verification:
+  - `curl http://127.0.0.1:8799/api/health` returns `{ "ok": true, ... }`
+  - `curl http://127.0.0.1:8799/api/system/status` returns JSON status.
+- Rollback:
+  - stop app process;
+  - remove app files and DB;
+  - remove launcher script.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)
