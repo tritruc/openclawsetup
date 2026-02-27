@@ -824,7 +824,7 @@ Ledger entry template:
   - Restore previous `scripts/OpenClaw-Autostart.bat`.
   - Remove `scripts/autostart_openclaw_tui.sh` from startup flow.
 - GitHub push status:
-  - PENDING (commit/push follows immediately).
+  - SUCCESS (commit `d098436` pushed to `origin/main`).
 
 ## 7) Secret handling checklist (do not skip)
 
