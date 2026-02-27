@@ -1,0 +1,15 @@
+[Unit]
+Description=Zalo Reminder Manager (local web app)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/manduong/.openclaw/workspace
+ExecStart=/home/manduong/.openclaw/workspace/scripts/run_zalo_reminder_manager.sh
+Restart=always
+RestartSec=3
+Environment=ZALO_REMINDER_HOST=127.0.0.1
+Environment=ZALO_REMINDER_PORT=8799
+
+[Install]
+WantedBy=default.target

@@ -19,6 +19,22 @@ scripts/run_zalo_reminder_manager.sh
 
 Mở: `http://127.0.0.1:8799`
 
+## Chạy nền bằng systemd user service (đã áp dụng trên máy hiện tại)
+
+```bash
+systemctl --user status zalo-reminder-manager.service
+systemctl --user restart zalo-reminder-manager.service
+systemctl --user stop zalo-reminder-manager.service
+```
+
+Template service trong repo:
+
+`scripts/systemd/zalo-reminder-manager.service`
+
+Service file runtime:
+
+`~/.config/systemd/user/zalo-reminder-manager.service`
+
 ## Bắt buộc trước khi gửi được tin
 
 `zca-cli` hiện yêu cầu license và phiên đăng nhập:

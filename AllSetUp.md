@@ -728,6 +728,29 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (pushed to `origin/main`).
 
+### 2026-02-27 01:06 UTC — Run reminder web app as persistent user service
+- Why: owner needs the reminder manager always available and scheduler running continuously.
+- Commands:
+  - create service: `~/.config/systemd/user/zalo-reminder-manager.service`
+  - `systemctl --user daemon-reload`
+  - `systemctl --user enable --now zalo-reminder-manager.service`
+  - `systemctl --user status --no-pager zalo-reminder-manager.service`
+- Files/paths touched:
+  - `~/.config/systemd/user/zalo-reminder-manager.service`
+  - symlink: `~/.config/systemd/user/default.target.wants/zalo-reminder-manager.service`
+  - `scripts/systemd/zalo-reminder-manager.service`
+  - `apps/zalo-reminder-manager/README.md`
+- Capability impact:
+  - app web + scheduler/listener now auto-start with user systemd session, not tied to one terminal process.
+- Verification:
+  - service state: `active (running)`
+  - `curl http://127.0.0.1:8799/api/health` => `{ "ok": true, ... }`
+- Rollback:
+  - `systemctl --user disable --now zalo-reminder-manager.service`
+  - remove service file and reload daemon.
+- GitHub push status:
+  - SUCCESS (pushed to `origin/main`).
+
 ---
 
 ## 7) Secret handling checklist (do not skip)
