@@ -1,6 +1,6 @@
 # Zalo Reminder Manager
 
-Web app quản lý nhắc hẹn Zalo (zalouser), có:
+Web app quản lý nhắc hẹn Zalo chạy **độc lập như một service** (không cần agent can thiệp từng lần), có:
 
 - CRUD nhắc hẹn (xem/sửa/xoá)
 - Quản lý người nhận kèm số điện thoại

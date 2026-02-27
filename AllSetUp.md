@@ -956,3 +956,20 @@ systemctl --user is-active zalo-reminder-manager.service
 ```bash
 systemctl --user restart zalo-reminder-manager.service
 ```
+
+## [2026-02-27 06:00:00 UTC] Made Zalo reminder scheduler deterministic and service-centric (agent-independent)
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py`:
+  - Scheduler now uses **anchor slots** from `daily_time` + `retry_interval_min` (e.g. 13:00, 13:03, 13:06) instead of drift from last-send.
+  - Added `send_count()` DB helper and slot-based due check.
+  - Listener restart now uses exponential backoff (15s -> max 300s) to avoid noisy tight loops when zca license/auth is broken.
+- Updated README wording to emphasize standalone service operation.
+- Restarted `zalo-reminder-manager.service`.
+
+### Verification
+- `python3 -m py_compile apps/zalo-reminder-manager/app.py` OK
+- `systemctl --user is-active zalo-reminder-manager.service` => `active`
+
+### Rollback
+- Revert `apps/zalo-reminder-manager/app.py` and `apps/zalo-reminder-manager/README.md` to previous commit and restart service.

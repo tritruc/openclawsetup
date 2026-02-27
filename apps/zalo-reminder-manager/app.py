@@ -628,6 +628,13 @@ class Store:
         except Exception:
             return None
 
+    def send_count(self, reminder_id: int, local_date: str) -> int:
+        rows = self.query(
+            "SELECT COUNT(1) as n FROM logs WHERE reminder_id=? AND event_type='send' AND local_date=?",
+            (reminder_id, local_date),
+        )
+        return int(rows[0]["n"]) if rows else 0
+
 
 @dataclass
 class RunResult:
@@ -773,6 +780,7 @@ class ReminderEngine:
         }
 
     def listener_loop(self, account_id: str, profile: str, stop: threading.Event):
+        backoff_sec = 15
         while not stop.is_set() and not self.stop_event.is_set():
             env = os.environ.copy()
             env["ZCA_PROFILE"] = profile
@@ -787,12 +795,14 @@ class ReminderEngine:
                 )
             except Exception as e:
                 self.store.add_log("listener_error", account_id=account_id, error_text=str(e))
-                time.sleep(10)
+                time.sleep(backoff_sec)
+                backoff_sec = min(300, backoff_sec * 2)
                 continue
 
             err_thread = threading.Thread(target=self._drain_stderr, args=(proc, account_id), daemon=True)
             err_thread.start()
 
+            had_event = False
             try:
                 while not stop.is_set() and proc.poll() is None:
                     line = proc.stdout.readline() if proc.stdout else ""
@@ -806,6 +816,7 @@ class ReminderEngine:
                         payload = json.loads(line)
                     except Exception:
                         continue
+                    had_event = True
                     self.handle_inbound(account_id, payload)
             finally:
                 if proc.poll() is None:
@@ -815,9 +826,13 @@ class ReminderEngine:
                     except Exception:
                         proc.kill()
 
+            if had_event:
+                backoff_sec = 15
+
             if not stop.is_set() and not self.stop_event.is_set():
-                self.store.add_log("listener_restart", account_id=account_id, error_text="Listener restarted in 15s")
-                time.sleep(15)
+                self.store.add_log("listener_restart", account_id=account_id, error_text=f"Listener restarted in {backoff_sec}s")
+                time.sleep(backoff_sec)
+                backoff_sec = min(300, backoff_sec * 2)
 
     def _drain_stderr(self, proc: subprocess.Popen, account_id: str):
         if not proc.stderr:
@@ -888,7 +903,6 @@ class ReminderEngine:
         reminders = self.store.get_active_reminders()
         for r in reminders:
             reminder_id = int(r["id"])
-            target_id = int(r["target_id"])
             tz_name = r.get("timezone") or APP_TZ
             try:
                 tz = ZoneInfo(tz_name)
@@ -905,12 +919,14 @@ class ReminderEngine:
             if int(r.get("require_date_ack", 1)) == 1 and self.store.is_acked(reminder_id, local_date):
                 continue
 
-            last_send = self.store.last_send_at(reminder_id, local_date)
-            retry_min = max(5, int(r.get("retry_interval_min", DEFAULT_RETRY_MIN)))
-            if last_send is not None:
-                delta = datetime.now(timezone.utc) - last_send.astimezone(timezone.utc)
-                if delta < timedelta(minutes=retry_min):
-                    continue
+            retry_min = max(1, int(r.get("retry_interval_min", DEFAULT_RETRY_MIN)))
+            elapsed_min = int((now_local - trigger).total_seconds() // 60)
+            slots_elapsed = (elapsed_min // retry_min) + 1
+            sends_done = self.store.send_count(reminder_id, local_date)
+
+            # Anchor schedule to trigger time (e.g. 13:00, 13:03, 13:06...) instead of drift by last-send time.
+            if sends_done >= slots_elapsed:
+                continue
 
             self.send_reminder(r, reason="scheduled")
 
