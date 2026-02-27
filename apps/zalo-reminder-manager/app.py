@@ -21,6 +21,7 @@ DEFAULT_DAILY_TIME = "08:00"
 DB_PATH = Path(os.environ.get("ZALO_REMINDER_DB", Path(__file__).with_name("reminders.db")))
 OPENCLAW_BIN = os.environ.get("OPENCLAW_BIN", "/home/manduong/.nvm/versions/node/v24.13.1/bin/openclaw")
 ZCA_BIN = os.environ.get("ZCA_BIN", "zca")
+ZALO_SEND_SH = os.environ.get("ZALO_SEND_SH", "/home/manduong/.openclaw/workspace/scripts/run_zalo_send.sh")
 HOST = os.environ.get("ZALO_REMINDER_HOST", "127.0.0.1")
 PORT = int(os.environ.get("ZALO_REMINDER_PORT", "8799"))
 
@@ -56,7 +57,7 @@ INDEX_HTML = r"""
 </head>
 <body>
   <h1>🌿 Zalo Reminder Manager</h1>
-  <div class="muted">Quản lý nhắc hẹn theo ngày + xác nhận DD/MM/YYYY để dừng nhắc trong ngày.</div>
+  <div class="muted">Quản lý nhắc hẹn theo ngày + yêu cầu xác nhận đúng cú pháp: DD/MM/YYYY đã xong (hoặc YYYY-MM-DD đã xong).</div>
 
   <div class="grid" style="margin-top:12px">
     <section class="card">
@@ -644,12 +645,9 @@ def parse_iso(s: str) -> datetime:
     return datetime.fromisoformat(s)
 
 
-def parse_date_from_text(text: str) -> Optional[datetime.date]:
-    if not text:
-        return None
-    t = text.strip()
-
-    m = re.search(r"\b(\d{2})[/-](\d{2})[/-](\d{4})\b", t)
+def _parse_date_token(token: str) -> Optional[datetime.date]:
+    token = (token or "").strip()
+    m = re.fullmatch(r"(\d{2})/(\d{2})/(\d{4})", token)
     if m:
         d, mo, y = map(int, m.groups())
         try:
@@ -657,7 +655,7 @@ def parse_date_from_text(text: str) -> Optional[datetime.date]:
         except ValueError:
             return None
 
-    m = re.search(r"\b(\d{4})-(\d{2})-(\d{2})\b", t)
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", token)
     if m:
         y, mo, d = map(int, m.groups())
         try:
@@ -666,6 +664,16 @@ def parse_date_from_text(text: str) -> Optional[datetime.date]:
             return None
 
     return None
+
+
+def parse_ack_done_date(text: str) -> Optional[datetime.date]:
+    if not text:
+        return None
+    t = re.sub(r"\s+", " ", text.strip().lower())
+    m = re.fullmatch(r"(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})\s+(đã xong|da xong)", t)
+    if not m:
+        return None
+    return _parse_date_token(m.group(1))
 
 
 def parse_hhmm(value: str):
@@ -835,7 +843,7 @@ class ReminderEngine:
         if self_id and from_id and from_id == self_id:
             return
 
-        maybe_date = parse_date_from_text(content)
+        maybe_date = parse_ack_done_date(content)
         if not maybe_date:
             return
 
@@ -929,26 +937,32 @@ class ReminderEngine:
         default_msg = (
             f"[{reminder.get('title','Nhắc hẹn')}]\n"
             f"Hôm nay ({date_text}) nhớ thực hiện việc đã hẹn.\n"
-            f"Vui lòng trả lời đúng ngày: {date_text} để em dừng nhắc trong hôm nay."
+            f"Vui lòng trả lời đúng cú pháp: \"{date_text} đã xong\" để em dừng nhắc trong hôm nay."
         )
         body = (reminder.get("message_template") or "").strip() or default_msg
         if date_text not in body:
-            body += f"\n\nXác nhận hôm nay: {date_text}"
+            body += f"\n\nXác nhận hôm nay: {date_text} đã xong"
 
-        # Prefer direct zca send (profile-based), fallback to openclaw message send.
-        profile = "default"
-        acc = [a for a in self.store.get_accounts() if a["account_id"] == account_id]
-        if acc:
-            profile = acc[0].get("zca_profile") or "default"
+        # Prefer local desktop Zalo send flow (human-like UI automation) when phone is available.
+        phone = (reminder.get("phone") or "").strip()
+        result: RunResult
+        if phone and Path(ZALO_SEND_SH).exists():
+            result = run_cmd(["bash", ZALO_SEND_SH, phone, body], timeout=90)
+        else:
+            # Fallback to zca / channel transport
+            profile = "default"
+            acc = [a for a in self.store.get_accounts() if a["account_id"] == account_id]
+            if acc:
+                profile = acc[0].get("zca_profile") or "default"
 
-        cmd = [ZCA_BIN, "--profile", profile, "msg", "send", str(thread_id), body]
-        if is_group:
-            cmd.insert(-2, "--group")
-        result = run_cmd(cmd, timeout=45)
+            cmd = [ZCA_BIN, "--profile", profile, "msg", "send", str(thread_id), body]
+            if is_group:
+                cmd.insert(-2, "--group")
+            result = run_cmd(cmd, timeout=45)
 
-        if not result.ok:
-            fallback_cmd = [OPENCLAW_BIN, "message", "send", "--channel", "zalouser", "--target", str(thread_id), "--message", body, "--account", account_id]
-            result = run_cmd(fallback_cmd, timeout=45)
+            if not result.ok:
+                fallback_cmd = [OPENCLAW_BIN, "message", "send", "--channel", "zalouser", "--target", str(thread_id), "--message", body, "--account", account_id]
+                result = run_cmd(fallback_cmd, timeout=45)
 
         if result.ok:
             self.store.add_log(

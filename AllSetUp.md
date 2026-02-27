@@ -926,3 +926,33 @@ powercfg /change hibernate-timeout-ac 180
   - `ops/platforms/zalo/messaging/send-message-phone.md`
   - `scripts/windows/zalo_send_message.ps1`
   - `scripts/run_zalo_send.sh`
+
+## [2026-02-27 05:51:40 UTC] Integrated Zalo desktop send flow into Reminder Manager + strict daily ack format
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py`:
+  - Reminder send now **prefers local desktop automation** (`scripts/run_zalo_send.sh`) when target has phone.
+  - Fallback remains `zca msg send` then `openclaw message send`.
+  - Daily stop condition changed to strict ack format:
+    - `DD/MM/YYYY đã xong` or `YYYY-MM-DD đã xong`
+  - Reminder template now instructs users to reply with exact format above.
+- Updated `apps/zalo-reminder-manager/README.md` to reflect new ack syntax and send path.
+- Restarted systemd user service: `zalo-reminder-manager.service`.
+
+### Commands run
+```bash
+python3 -m py_compile apps/zalo-reminder-manager/app.py
+systemctl --user restart zalo-reminder-manager.service
+systemctl --user is-active zalo-reminder-manager.service
+```
+
+### Impact
+- Daily spam/nhắc chỉ dừng khi người nhận trả lời đúng mẫu `"<ngày> đã xong"`.
+- Sending path now aligns with verified human-like Zalo desktop flow for better reliability on this machine.
+
+### Rollback
+- Revert `apps/zalo-reminder-manager/app.py` + `README.md` to previous commit.
+- Restart service:
+```bash
+systemctl --user restart zalo-reminder-manager.service
+```

@@ -6,8 +6,9 @@ Web app quản lý nhắc hẹn Zalo (zalouser), có:
 - Quản lý người nhận kèm số điện thoại
 - Quản lý tài khoản gửi (account_id + zca profile)
 - Nhắc mỗi ngày theo giờ cố định (mặc định 08:00 Asia/Ho_Chi_Minh)
-- Nếu chưa xác nhận đúng ngày thì tự nhắc lại mỗi 30 phút
-- Khi người nhận trả lời đúng ngày (DD/MM/YYYY hoặc YYYY-MM-DD) thì dừng nhắc trong hôm đó
+- Nếu chưa xác nhận đúng cú pháp thì tự nhắc lại mỗi 30 phút
+- Khi người nhận trả lời đúng cú pháp `<ngày> đã xong` (DD/MM/YYYY đã xong hoặc YYYY-MM-DD đã xong) thì dừng nhắc trong hôm đó
+- Ưu tiên gửi qua luồng desktop automation (script `run_zalo_send.sh`) để thao tác như người dùng thật
 - Nhật ký gửi/ack/lỗi
 
 ## Chạy app
