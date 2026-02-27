@@ -1193,3 +1193,30 @@ Current OCR-based `ok`/plain-text ACK was too noisy and caused false stop / endl
 
 ### Rollback
 - Revert confirmation string in `send_ack_confirmation()` and restart service.
+
+## [2026-02-27 10:04:34 UTC] Increased agent timeout to reduce Telegram request timeout during long runs
+
+### What changed
+- Updated OpenClaw config key:
+  - `agents.defaults.timeoutSeconds = 86400` (24h)
+
+### Commands run
+```bash
+openclaw config set agents.defaults.timeoutSeconds 86400
+openclaw config get agents.defaults.timeoutSeconds
+systemctl --user restart openclaw-gateway.service
+```
+
+### Impact
+- Long tasks have much higher default runtime budget before timeout.
+- Helps avoid premature request timeout on heavy reasoning/automation tasks.
+
+### Verification
+- `openclaw.json` now shows `"timeoutSeconds": 86400`
+- Gateway service is active.
+
+### Rollback
+```bash
+openclaw config set agents.defaults.timeoutSeconds 600
+systemctl --user restart openclaw-gateway.service
+```
