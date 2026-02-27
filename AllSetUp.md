@@ -973,3 +973,27 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert `apps/zalo-reminder-manager/app.py` and `apps/zalo-reminder-manager/README.md` to previous commit and restart service.
+
+## [2026-02-27 06:20:00 UTC] Hardened desktop-only Zalo send flow (no direct Zalo API path)
+
+### What changed
+- Updated `scripts/windows/zalo_send_message.ps1` to enforce full UI flow:
+  1) focus Zalo
+  2) clear and paste phone into search
+  3) Enter + fallback click first result
+  4) focus composer, paste message
+  5) click send + Enter fallback
+- Added extra proof screenshot at search stage:
+  - `zalo_after_search.png`
+- Updated wrapper output in `scripts/run_zalo_send.sh` to include 3 proof screenshots.
+
+### Why
+- Prevent drift/nhầm luồng caused by partial focus and ambiguous result selection.
+- Ensure sending is strictly via desktop automation (human-like), not direct Zalo service APIs.
+
+### Verification
+- Ran: `scripts/run_zalo_send.sh "0913885625" "test luong moi"`
+- Returned paths for `SEARCH`, `BEFORE`, `AFTER` screenshots.
+
+### Rollback
+- Revert `scripts/windows/zalo_send_message.ps1` and `scripts/run_zalo_send.sh` to previous commit.

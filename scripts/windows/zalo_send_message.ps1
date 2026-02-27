@@ -2,7 +2,8 @@ param(
   [Parameter(Mandatory=$true)][string]$Phone,
   [Parameter(Mandatory=$true)][string]$Message,
   [string]$BeforePath = "C:\Users\ADMIN\AppData\Local\Temp\zalo_before_send.png",
-  [string]$AfterPath  = "C:\Users\ADMIN\AppData\Local\Temp\zalo_after_send.png"
+  [string]$AfterPath  = "C:\Users\ADMIN\AppData\Local\Temp\zalo_after_send.png",
+  [string]$SearchPath = "C:\Users\ADMIN\AppData\Local\Temp\zalo_after_search.png"
 )
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -17,6 +18,8 @@ public class MouseOps {
   public const uint LEFTUP = 0x0004;
 }
 "@
+
+$ErrorActionPreference = 'SilentlyContinue'
 
 function Click([int]$x,[int]$y){
   [MouseOps]::SetCursorPos($x,$y) | Out-Null
@@ -34,38 +37,53 @@ function Snap([string]$p){
   $g.Dispose(); $bmp.Dispose()
 }
 
-$ws=New-Object -ComObject WScript.Shell
-$null=$ws.AppActivate('Zalo')
-Start-Sleep -Milliseconds 500
+function FocusZalo {
+  $ws=New-Object -ComObject WScript.Shell
+  $null=$ws.AppActivate('Zalo')
+  Start-Sleep -Milliseconds 450
+  return $ws
+}
 
-# Search contact
+$ws = FocusZalo
+
+# 1) Search by phone (strictly replace old query)
 Click 178 52
-Start-Sleep -Milliseconds 150
+Start-Sleep -Milliseconds 120
 $ws.SendKeys('^a')
 Start-Sleep -Milliseconds 80
-$ws.SendKeys($Phone)
-Start-Sleep -Milliseconds 550
-$ws.SendKeys('{DOWN}')
-Start-Sleep -Milliseconds 180
+$ws.SendKeys('{BACKSPACE}')
+Start-Sleep -Milliseconds 80
+Set-Clipboard -Value $Phone
+$ws.SendKeys('^v')
+Start-Sleep -Milliseconds 450
+
+# Try open exact search result by Enter first, then fallback Down+Enter.
 $ws.SendKeys('~')
 Start-Sleep -Milliseconds 700
+Snap $SearchPath
 
-# Compose + send
+# Fallback select first result row if still on list state.
+Click 205 138
+Start-Sleep -Milliseconds 450
+
+# 2) Focus message composer
 Click 760 744
 Start-Sleep -Milliseconds 120
 $ws.SendKeys('^a')
 Start-Sleep -Milliseconds 80
 Set-Clipboard -Value $Message
-Start-Sleep -Milliseconds 120
+Start-Sleep -Milliseconds 80
 $ws.SendKeys('^v')
-Start-Sleep -Milliseconds 300
+Start-Sleep -Milliseconds 250
 Snap $BeforePath
 
+# 3) Send by button + Enter fallback
 Click 1185 744
 Start-Sleep -Milliseconds 250
 $ws.SendKeys('~')
 Start-Sleep -Milliseconds 900
 Snap $AfterPath
 
+Write-Output "SEARCH=$SearchPath"
 Write-Output "BEFORE=$BeforePath"
 Write-Output "AFTER=$AfterPath"
