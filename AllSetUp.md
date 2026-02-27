@@ -771,7 +771,7 @@ Ledger entry template:
 - Rollback:
   - Restore previous BAT content, or delete Startup BAT from Startup folder.
 - GitHub push status:
-  - PENDING (next step commit+push in this session).
+  - SUCCESS (commit `2943908` pushed to `origin/main`).
 
 ## 7) Secret handling checklist (do not skip)
 
