@@ -773,6 +773,34 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (commit `2943908` pushed to `origin/main`).
 
+### 2026-02-27 01:22 UTC — Fix Windows Startup BAT quote bug (0x80070002) and verify Telegram delivery
+- Why: Startup opened terminal but failed with `error 2147942402 (0x80070002)` around `" exec bash"`; owner also reported Telegram chat appeared not working.
+- Root cause:
+  - Windows Terminal (`wt.exe`) command parsing conflicted with embedded quoted shell string (`exec bash`) in BAT.
+- Commands:
+  - Rewrite BAT to avoid `wt.exe` parsing path and launch `wsl.exe` directly:
+    - `write scripts/OpenClaw-Autostart.bat`
+  - Sync Startup copy:
+    - `cp scripts/OpenClaw-Autostart.bat "C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\OpenClaw-Autostart.bat"`
+  - Verify bootstrap command in WSL:
+    - `/mnt/c/Windows/System32/wsl.exe -d Ubuntu -- bash -lc "cd /home/manduong/.openclaw/workspace; export PATH=...; ...; echo '[OpenClaw] Startup done.'"`
+  - Verify Telegram send path:
+    - `message.send(channel=telegram,target=6542038310,...)`
+- Files/paths touched:
+  - `scripts/OpenClaw-Autostart.bat`
+  - `C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\OpenClaw-Autostart.bat`
+- Capability impact:
+  - On Windows login, autostart now opens Ubuntu terminal via `wsl.exe` without the quote/launch error.
+  - OpenClaw bootstrap commands execute from terminal start sequence.
+  - Telegram outbound delivery validated.
+- Verification:
+  - Telegram test send succeeded: `ok=true`, `messageId=70`, `chatId=6542038310`.
+  - `openclaw status`: Telegram channel `ON/OK`.
+- Rollback:
+  - Restore previous BAT using `wt.exe` path if desired.
+- GitHub push status:
+  - PENDING (commit/push follows immediately).
+
 ## 7) Secret handling checklist (do not skip)
 
 Never commit these raw values:
