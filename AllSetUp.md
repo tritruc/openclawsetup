@@ -997,3 +997,26 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert `scripts/windows/zalo_send_message.ps1` and `scripts/run_zalo_send.sh` to previous commit.
+
+## [2026-02-27 07:10:32 UTC] Added configurable reminder ack_text (default `ok`)
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py`:
+  - Added `DEFAULT_ACK_TEXT = "ok"`.
+  - Reminders now store `ack_text` (DB migration auto-adds `ack_text` column for old DBs).
+  - Ack matching logic now supports:
+    - exact `ack_text` (default `ok`),
+    - `ack_text` template with `{date}` placeholder,
+    - backward compatibility for `<date> đã xong`.
+  - Default reminder message now includes reminder-specific ack hint.
+  - UI now has `rAck` field to configure ack phrase per reminder.
+- Updated `apps/zalo-reminder-manager/README.md` for new ack behavior.
+- Set existing reminder #1 `ack_text='ok'`.
+
+### Verification
+- `python3 -m py_compile apps/zalo-reminder-manager/app.py` OK.
+- DB column exists: `PRAGMA table_info(reminders)` includes `ack_text`.
+- Service active after restart.
+
+### Rollback
+- Revert app/README and restart service.

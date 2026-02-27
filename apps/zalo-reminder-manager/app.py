@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 APP_TZ = "Asia/Ho_Chi_Minh"
 DEFAULT_RETRY_MIN = 30
 DEFAULT_DAILY_TIME = "08:00"
+DEFAULT_ACK_TEXT = "ok"
 DB_PATH = Path(os.environ.get("ZALO_REMINDER_DB", Path(__file__).with_name("reminders.db")))
 OPENCLAW_BIN = os.environ.get("OPENCLAW_BIN", "/home/manduong/.nvm/versions/node/v24.13.1/bin/openclaw")
 ZCA_BIN = os.environ.get("ZCA_BIN", "zca")
@@ -104,7 +105,8 @@ INDEX_HTML = r"""
         <input id="rTime" type="time" value="08:00"/>
         <input id="rTz" value="Asia/Ho_Chi_Minh"/>
         <input id="rRetry" type="number" min="5" value="30" style="width:90px"/>
-        <label><input id="rNeedAck" type="checkbox" checked/> Cần xác nhận ngày</label>
+        <input id="rAck" value="ok" placeholder="Reply để dừng (mặc định: ok)" style="min-width:220px"/>
+        <label><input id="rNeedAck" type="checkbox" checked/> Cần xác nhận</label>
         <label><input id="rActive" type="checkbox" checked/> Active</label>
       </div>
       <textarea id="rMsg" placeholder="Nội dung nhắc (có thể để trống để dùng mẫu mặc định)"></textarea>
@@ -233,8 +235,8 @@ async function loadReminders(){
       <td>${esc(r.title)}</td>
       <td>${esc(r.target_name||'')}<br><span class='muted'>${esc(r.phone||'')}</span></td>
       <td>${esc(r.daily_time)}<br><span class='muted'>${esc(r.timezone)} · ${r.retry_interval_min}p</span></td>
-      <td>${esc((r.message_template||'').slice(0,120))}</td>
-      <td>${r.active? '✅':'❌'} ${r.require_date_ack? '<span class="pill">cần xác nhận ngày</span>':''}</td>
+      <td>${esc((r.message_template||'').slice(0,120))}<br><span class='muted'>Ack: ${esc(r.ack_text||'ok')}</span></td>
+      <td>${r.active? '✅':'❌'} ${r.require_date_ack? '<span class="pill">cần xác nhận</span>':''}</td>
       <td>
         <button class='secondary' onclick='pickReminder(${r.id})'>Sửa</button>
         <button class='secondary' onclick='sendNow(${r.id})'>Gửi ngay</button>
@@ -251,7 +253,7 @@ async function pickReminder(id){
   const r = rows.find(x=>x.id===id); if(!r) return;
   edit.reminderId=id;
   rTitle.value=r.title||''; rTarget.value=r.target_id; rTime.value=r.daily_time||'08:00'; rTz.value=r.timezone||'Asia/Ho_Chi_Minh'; rRetry.value=r.retry_interval_min||30;
-  rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
+  rAck.value=r.ack_text||'ok'; rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
 }
 
 async function saveReminder(){
@@ -263,12 +265,13 @@ async function saveReminder(){
     timezone: rTz.value.trim() || 'Asia/Ho_Chi_Minh',
     retry_interval_min: Number(rRetry.value||30),
     require_date_ack: rNeedAck.checked?1:0,
+    ack_text: (rAck.value||'').trim() || 'ok',
     active: rActive.checked?1:0,
     message_template: rMsg.value.trim()
   };
   if(!body.title || !body.target_id) return alert('Thiếu tên nhắc hẹn hoặc người nhận');
   await api('/api/reminders', {method:'POST', body: JSON.stringify(body)});
-  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rNeedAck.checked=true; rActive.checked=true;
+  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rAck.value='ok'; rNeedAck.checked=true; rActive.checked=true;
   await refreshAll();
 }
 
@@ -358,6 +361,7 @@ class Store:
                   timezone TEXT NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
                   retry_interval_min INTEGER NOT NULL DEFAULT 30,
                   require_date_ack INTEGER NOT NULL DEFAULT 1,
+                  ack_text TEXT NOT NULL DEFAULT 'ok',
                   active INTEGER NOT NULL DEFAULT 1,
                   created_at TEXT NOT NULL,
                   updated_at TEXT NOT NULL,
@@ -394,6 +398,12 @@ class Store:
                     "INSERT INTO accounts(account_id,name,zca_profile,enabled,created_at,updated_at) VALUES (?,?,?,?,?,?)",
                     ("default", "Default", "default", 1, now, now),
                 )
+
+            # lightweight migration for old DBs
+            cols = [r["name"] for r in c.execute("PRAGMA table_info(reminders)").fetchall()]
+            if "ack_text" not in cols:
+                c.execute("ALTER TABLE reminders ADD COLUMN ack_text TEXT NOT NULL DEFAULT 'ok'")
+                c.execute("UPDATE reminders SET ack_text='ok' WHERE ack_text IS NULL OR TRIM(ack_text)='' ")
 
     def query(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
         with self.lock, self._conn() as c:
@@ -490,7 +500,7 @@ class Store:
             if payload.get("id"):
                 c.execute(
                     """
-                    UPDATE reminders SET title=?, target_id=?, message_template=?, daily_time=?, timezone=?, retry_interval_min=?, require_date_ack=?, active=?, updated_at=?
+                    UPDATE reminders SET title=?, target_id=?, message_template=?, daily_time=?, timezone=?, retry_interval_min=?, require_date_ack=?, ack_text=?, active=?, updated_at=?
                     WHERE id=?
                     """,
                     (
@@ -501,6 +511,7 @@ class Store:
                         payload.get("timezone", APP_TZ),
                         int(payload.get("retry_interval_min", DEFAULT_RETRY_MIN)),
                         int(payload.get("require_date_ack", 1)),
+                        (payload.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT,
                         int(payload.get("active", 1)),
                         now,
                         int(payload["id"]),
@@ -509,8 +520,8 @@ class Store:
             else:
                 c.execute(
                     """
-                    INSERT INTO reminders(title,target_id,message_template,daily_time,timezone,retry_interval_min,require_date_ack,active,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    INSERT INTO reminders(title,target_id,message_template,daily_time,timezone,retry_interval_min,require_date_ack,ack_text,active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         payload["title"],
@@ -520,6 +531,7 @@ class Store:
                         payload.get("timezone", APP_TZ),
                         int(payload.get("retry_interval_min", DEFAULT_RETRY_MIN)),
                         int(payload.get("require_date_ack", 1)),
+                        (payload.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT,
                         int(payload.get("active", 1)),
                         now,
                         now,
@@ -616,10 +628,10 @@ class Store:
             )
             c.commit()
 
-    def last_send_at(self, reminder_id: int, local_date: str) -> Optional[datetime]:
+    def last_send_at(self, reminder_id: int, local_date: str, event_type: str = "send") -> Optional[datetime]:
         rows = self.query(
-            "SELECT created_at FROM logs WHERE reminder_id=? AND event_type='send' AND local_date=? ORDER BY id DESC LIMIT 1",
-            (reminder_id, local_date),
+            "SELECT created_at FROM logs WHERE reminder_id=? AND event_type=? AND local_date=? ORDER BY id DESC LIMIT 1",
+            (reminder_id, event_type, local_date),
         )
         if not rows:
             return None
@@ -627,13 +639,6 @@ class Store:
             return parse_iso(rows[0]["created_at"])
         except Exception:
             return None
-
-    def send_count(self, reminder_id: int, local_date: str) -> int:
-        rows = self.query(
-            "SELECT COUNT(1) as n FROM logs WHERE reminder_id=? AND event_type='send' AND local_date=?",
-            (reminder_id, local_date),
-        )
-        return int(rows[0]["n"]) if rows else 0
 
 
 @dataclass
@@ -673,14 +678,32 @@ def _parse_date_token(token: str) -> Optional[datetime.date]:
     return None
 
 
-def parse_ack_done_date(text: str) -> Optional[datetime.date]:
-    if not text:
-        return None
-    t = re.sub(r"\s+", " ", text.strip().lower())
+def normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def ack_matches(text: str, ack_text: str, today_local: datetime.date) -> bool:
+    t = normalize_text(text)
+    if not t:
+        return False
+
+    token = (ack_text or DEFAULT_ACK_TEXT).strip()
+    if not token:
+        token = DEFAULT_ACK_TEXT
+
+    token_norm = normalize_text(token)
+    token_today = normalize_text(token.replace("{date}", today_local.strftime("%d/%m/%Y")))
+    token_today_iso = normalize_text(token.replace("{date}", today_local.isoformat()))
+
+    if t in {token_norm, token_today, token_today_iso}:
+        return True
+
+    # backward compatibility: accept "<date> đã xong"
     m = re.fullmatch(r"(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})\s+(đã xong|da xong)", t)
     if not m:
-        return None
-    return _parse_date_token(m.group(1))
+        return False
+    d = _parse_date_token(m.group(1))
+    return d == today_local
 
 
 def parse_hhmm(value: str):
@@ -858,10 +881,6 @@ class ReminderEngine:
         if self_id and from_id and from_id == self_id:
             return
 
-        maybe_date = parse_ack_done_date(content)
-        if not maybe_date:
-            return
-
         reminders = self.store.query(
             """
             SELECT r.*, t.thread_id, t.account_id, t.id as target_id
@@ -878,7 +897,8 @@ class ReminderEngine:
             except Exception:
                 now_local = datetime.now(timezone.utc).astimezone(ZoneInfo(APP_TZ))
             today_local = now_local.date()
-            if maybe_date == today_local:
+
+            if ack_matches(content, str(r.get("ack_text") or DEFAULT_ACK_TEXT), today_local):
                 local_date = today_local.isoformat()
                 self.store.ack(int(r["id"]), local_date, content)
                 self.store.add_log(
@@ -920,15 +940,16 @@ class ReminderEngine:
                 continue
 
             retry_min = max(1, int(r.get("retry_interval_min", DEFAULT_RETRY_MIN)))
-            elapsed_min = int((now_local - trigger).total_seconds() // 60)
-            slots_elapsed = (elapsed_min // retry_min) + 1
-            sends_done = self.store.send_count(reminder_id, local_date)
+            last_scheduled = self.store.last_send_at(reminder_id, local_date, event_type="send")
 
-            # Anchor schedule to trigger time (e.g. 13:00, 13:03, 13:06...) instead of drift by last-send time.
-            if sends_done >= slots_elapsed:
+            if last_scheduled is None:
+                # First scheduled send of the day: send as soon as we pass trigger time.
+                self.send_reminder(r, reason="scheduled")
                 continue
 
-            self.send_reminder(r, reason="scheduled")
+            delta = datetime.now(timezone.utc) - last_scheduled.astimezone(timezone.utc)
+            if delta >= timedelta(minutes=retry_min):
+                self.send_reminder(r, reason="scheduled")
 
     def send_reminder(self, reminder: Dict[str, Any], reason: str = "manual") -> RunResult:
         reminder_id = int(reminder["id"])
@@ -950,14 +971,16 @@ class ReminderEngine:
         local_date = now_local.date().isoformat()
         date_text = now_local.strftime("%d/%m/%Y")
 
+        ack_text = (str(reminder.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT)
+        ack_hint = ack_text.replace("{date}", date_text)
         default_msg = (
             f"[{reminder.get('title','Nhắc hẹn')}]\n"
             f"Hôm nay ({date_text}) nhớ thực hiện việc đã hẹn.\n"
-            f"Vui lòng trả lời đúng cú pháp: \"{date_text} đã xong\" để em dừng nhắc trong hôm nay."
+            f"Vui lòng trả lời: \"{ack_hint}\" để em dừng nhắc trong hôm nay."
         )
         body = (reminder.get("message_template") or "").strip() or default_msg
-        if date_text not in body:
-            body += f"\n\nXác nhận hôm nay: {date_text} đã xong"
+        if ack_hint.lower() not in body.lower():
+            body += f"\n\nXác nhận hôm nay: {ack_hint}"
 
         # Prefer local desktop Zalo send flow (human-like UI automation) when phone is available.
         phone = (reminder.get("phone") or "").strip()
@@ -981,8 +1004,9 @@ class ReminderEngine:
                 result = run_cmd(fallback_cmd, timeout=45)
 
         if result.ok:
+            event_type = "send" if reason == "scheduled" else "send_manual"
             self.store.add_log(
-                "send",
+                event_type,
                 account_id=account_id,
                 reminder_id=reminder_id,
                 target_id=target_id,
