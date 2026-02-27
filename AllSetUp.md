@@ -1020,3 +1020,23 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert app/README and restart service.
+
+## [2026-02-27 07:41:15 UTC] Enforced next-day start when schedule time already passed
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py`:
+  - Added `start_date` field for reminders (auto-migrated on startup).
+  - On create/update reminder, if current local time is already past `daily_time`, app sets `start_date = tomorrow`.
+  - Scheduler now skips sends before `start_date`.
+- Updated reminder #1 (0913885625):
+  - `daily_time=14:15`, `retry_interval_min=1`, `timezone=Asia/Ho_Chi_Minh`, `ack_text=ok`, `start_date=2026-02-28`.
+
+### Why
+- Match required behavior: if user sets a time that already passed today, first send must start next day (not immediately today).
+
+### Verification
+- DB schema includes `start_date`.
+- Reminder #1 shows `start_date=2026-02-28` while current VN time was 14:41.
+
+### Rollback
+- Revert app.py and set `start_date` to NULL for reminders if needed.

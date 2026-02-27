@@ -362,6 +362,7 @@ class Store:
                   retry_interval_min INTEGER NOT NULL DEFAULT 30,
                   require_date_ack INTEGER NOT NULL DEFAULT 1,
                   ack_text TEXT NOT NULL DEFAULT 'ok',
+                  start_date TEXT,
                   active INTEGER NOT NULL DEFAULT 1,
                   created_at TEXT NOT NULL,
                   updated_at TEXT NOT NULL,
@@ -404,6 +405,8 @@ class Store:
             if "ack_text" not in cols:
                 c.execute("ALTER TABLE reminders ADD COLUMN ack_text TEXT NOT NULL DEFAULT 'ok'")
                 c.execute("UPDATE reminders SET ack_text='ok' WHERE ack_text IS NULL OR TRIM(ack_text)='' ")
+            if "start_date" not in cols:
+                c.execute("ALTER TABLE reminders ADD COLUMN start_date TEXT")
 
     def query(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
         with self.lock, self._conn() as c:
@@ -496,22 +499,35 @@ class Store:
 
     def upsert_reminder(self, payload: Dict[str, Any]):
         now = utc_now_iso()
+        tz_name = payload.get("timezone", APP_TZ) or APP_TZ
+        daily_time = payload.get("daily_time", DEFAULT_DAILY_TIME) or DEFAULT_DAILY_TIME
+        try:
+            tz = ZoneInfo(tz_name)
+        except Exception:
+            tz = ZoneInfo(APP_TZ)
+        now_local = datetime.now(timezone.utc).astimezone(tz)
+        h, m = parse_hhmm(daily_time)
+        trigger_today = now_local.replace(hour=h, minute=m, second=0, microsecond=0)
+        # If schedule time already passed at save-time, first run starts next day.
+        start_date = (now_local.date() + timedelta(days=1) if now_local > trigger_today else now_local.date()).isoformat()
+
         with self.lock, self._conn() as c:
             if payload.get("id"):
                 c.execute(
                     """
-                    UPDATE reminders SET title=?, target_id=?, message_template=?, daily_time=?, timezone=?, retry_interval_min=?, require_date_ack=?, ack_text=?, active=?, updated_at=?
+                    UPDATE reminders SET title=?, target_id=?, message_template=?, daily_time=?, timezone=?, retry_interval_min=?, require_date_ack=?, ack_text=?, start_date=?, active=?, updated_at=?
                     WHERE id=?
                     """,
                     (
                         payload["title"],
                         int(payload["target_id"]),
                         payload.get("message_template", ""),
-                        payload.get("daily_time", DEFAULT_DAILY_TIME),
-                        payload.get("timezone", APP_TZ),
+                        daily_time,
+                        tz_name,
                         int(payload.get("retry_interval_min", DEFAULT_RETRY_MIN)),
                         int(payload.get("require_date_ack", 1)),
                         (payload.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT,
+                        start_date,
                         int(payload.get("active", 1)),
                         now,
                         int(payload["id"]),
@@ -520,18 +536,19 @@ class Store:
             else:
                 c.execute(
                     """
-                    INSERT INTO reminders(title,target_id,message_template,daily_time,timezone,retry_interval_min,require_date_ack,ack_text,active,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                    INSERT INTO reminders(title,target_id,message_template,daily_time,timezone,retry_interval_min,require_date_ack,ack_text,start_date,active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         payload["title"],
                         int(payload["target_id"]),
                         payload.get("message_template", ""),
-                        payload.get("daily_time", DEFAULT_DAILY_TIME),
-                        payload.get("timezone", APP_TZ),
+                        daily_time,
+                        tz_name,
                         int(payload.get("retry_interval_min", DEFAULT_RETRY_MIN)),
                         int(payload.get("require_date_ack", 1)),
                         (payload.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT,
+                        start_date,
                         int(payload.get("active", 1)),
                         now,
                         now,
@@ -933,6 +950,9 @@ class ReminderEngine:
 
             h, m = parse_hhmm(r.get("daily_time") or DEFAULT_DAILY_TIME)
             trigger = now_local.replace(hour=h, minute=m, second=0, microsecond=0)
+            start_date = (r.get("start_date") or "").strip()
+            if start_date and local_date < start_date:
+                continue
             if now_local < trigger:
                 continue
 
