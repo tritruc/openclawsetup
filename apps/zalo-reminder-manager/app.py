@@ -23,6 +23,7 @@ DB_PATH = Path(os.environ.get("ZALO_REMINDER_DB", Path(__file__).with_name("remi
 OPENCLAW_BIN = os.environ.get("OPENCLAW_BIN", "/home/manduong/.nvm/versions/node/v24.13.1/bin/openclaw")
 ZCA_BIN = os.environ.get("ZCA_BIN", "zca")
 ZALO_SEND_SH = os.environ.get("ZALO_SEND_SH", "/home/manduong/.openclaw/workspace/scripts/run_zalo_send.sh")
+ZALO_CHECK_ACK_SH = os.environ.get("ZALO_CHECK_ACK_SH", "/home/manduong/.openclaw/workspace/scripts/run_zalo_check_ack.sh")
 HOST = os.environ.get("ZALO_REMINDER_HOST", "127.0.0.1")
 PORT = int(os.environ.get("ZALO_REMINDER_PORT", "8799"))
 
@@ -978,6 +979,25 @@ class ReminderEngine:
                 error_text=(result.stderr or result.stdout or "Send failed")[:1000],
             )
 
+    def check_desktop_ack(self, reminder: Dict[str, Any], local_date: str) -> bool:
+        phone = (reminder.get("phone") or "").strip()
+        if not phone or not Path(ZALO_CHECK_ACK_SH).exists():
+            return False
+        ack_text = (str(reminder.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT)
+        rr = run_cmd(["bash", ZALO_CHECK_ACK_SH, phone, ack_text], timeout=90)
+        out = f"{rr.stdout}\n{rr.stderr}".lower()
+        found = rr.ok and ("ack_found=1" in out)
+        self.store.add_log(
+            "ack_probe",
+            account_id=reminder.get("account_id") or "default",
+            reminder_id=int(reminder["id"]),
+            target_id=int(reminder["target_id"]),
+            local_date=local_date,
+            message_text=(rr.stdout or "")[:500],
+            error_text=(rr.stderr or "")[:500],
+        )
+        return found
+
     def scheduler_loop(self):
         while not self.stop_event.is_set():
             try:
@@ -1007,6 +1027,20 @@ class ReminderEngine:
                 continue
 
             if int(r.get("require_date_ack", 1)) == 1 and self.store.is_acked(reminder_id, local_date):
+                continue
+
+            # Desktop-only ACK detection path (for setups where API listener is unavailable).
+            if int(r.get("require_date_ack", 1)) == 1 and self.check_desktop_ack(r, local_date):
+                self.store.ack(reminder_id, local_date, "desktop-ack-detected")
+                self.store.add_log(
+                    "ack",
+                    account_id=r.get("account_id") or "default",
+                    reminder_id=reminder_id,
+                    target_id=int(r["target_id"]),
+                    local_date=local_date,
+                    message_text="desktop-ack-detected",
+                )
+                self.send_ack_confirmation(r, local_date)
                 continue
 
             retry_min = max(1, int(r.get("retry_interval_min", DEFAULT_RETRY_MIN)))

@@ -1060,3 +1060,27 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert app.py/README and restart service.
+
+## [2026-02-27 07:58:34 UTC] Added desktop-only ACK detection via OCR (no Zalo API listener dependency)
+
+### What changed
+- Added desktop capture script:
+  - `scripts/windows/zalo_capture_chat.ps1` (open chat by phone + screenshot current chat view)
+- Added OCR parser:
+  - `scripts/ocr_ack_check.js` using `tesseract.js` (local OCR)
+- Added runner:
+  - `scripts/run_zalo_check_ack.sh <phone> [ack_text]` -> outputs `ACK_FOUND=1/0`
+- Integrated into `apps/zalo-reminder-manager/app.py` scheduler:
+  - before sending retry, run desktop ACK probe
+  - if ACK detected: write `daily_acks`, log `ack`, send confirmation message, skip further sends
+  - added log event `ack_probe`
+
+### Dependency
+- Installed workspace-local npm dependency: `tesseract.js`
+
+### Verification
+- `scripts/run_zalo_check_ack.sh "0913885625" "ok"` returned `ACK_FOUND=1`
+- Service restarted and active.
+
+### Note
+- Current reminder #1 is intentionally `active=0` for anti-spam safety until owner re-enables.
