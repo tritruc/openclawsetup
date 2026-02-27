@@ -29,18 +29,21 @@ function norm(s) {
   const ackNorm = norm(ack);
 
   let found = false;
+  let userOkCount = 0;
 
   if (ackNorm === 'ok') {
     const okCount = (t.match(/\bok\b/g) || []).length;
     const hintCount = (t.match(/xac nhan hom nay\s*:?\s*ok/g) || []).length;
-    // Incoming standalone "ok" should add extra count beyond reminder hints.
-    found = okCount > hintCount;
+    userOkCount = Math.max(0, okCount - hintCount);
+    found = userOkCount > 0;
   } else {
     const esc = ackNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     found = new RegExp(`(^|\\s)${esc}($|\\s)`).test(t);
+    userOkCount = found ? 1 : 0;
   }
 
   console.log(`ACK_FOUND=${found ? 1 : 0}`);
+  console.log(`USER_OK_COUNT=${userOkCount}`);
   console.log(`OCR_TEXT=${t.slice(0, 800)}`);
 })().catch((e) => {
   console.log('ACK_FOUND=0');

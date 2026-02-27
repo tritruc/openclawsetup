@@ -1084,3 +1084,23 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Note
 - Current reminder #1 is intentionally `active=0` for anti-spam safety until owner re-enables.
+
+## [2026-02-27 08:10:10 UTC] Fixed reminder behavior: keep sending until NEW ack arrives
+
+### Problem
+- OCR ack probe could match old `ok` already visible in chat history, causing premature stop.
+
+### Fix
+- Added `ack_baselines` table to store per-day baseline `user_ok_count` after first send.
+- Updated OCR script `scripts/ocr_ack_check.js` to output `USER_OK_COUNT`.
+- Scheduler logic now:
+  1) sends first scheduled message,
+  2) records baseline user-ok count,
+  3) only stops when current `USER_OK_COUNT` increases above baseline (new ack event).
+
+### Safety reset
+- Cleared today's `daily_acks` + baseline and re-enabled reminder #1.
+
+### Verification
+- `run_zalo_check_ack.sh ...` now reports `ACK_FOUND=0` when only old history is present.
+- Service restarted and active.

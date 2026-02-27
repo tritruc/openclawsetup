@@ -391,6 +391,15 @@ class Store:
                   error_text TEXT,
                   raw_json TEXT
                 );
+
+                CREATE TABLE IF NOT EXISTS ack_baselines (
+                  reminder_id INTEGER NOT NULL,
+                  local_date TEXT NOT NULL,
+                  user_ok_count INTEGER NOT NULL DEFAULT 0,
+                  created_at TEXT NOT NULL,
+                  updated_at TEXT NOT NULL,
+                  PRIMARY KEY(reminder_id, local_date)
+                );
                 """
             )
             now = utc_now_iso()
@@ -657,6 +666,23 @@ class Store:
             return parse_iso(rows[0]["created_at"])
         except Exception:
             return None
+
+    def get_ack_baseline(self, reminder_id: int, local_date: str) -> Optional[int]:
+        rows = self.query("SELECT user_ok_count FROM ack_baselines WHERE reminder_id=? AND local_date=?", (reminder_id, local_date))
+        return int(rows[0]["user_ok_count"]) if rows else None
+
+    def set_ack_baseline(self, reminder_id: int, local_date: str, user_ok_count: int):
+        now = utc_now_iso()
+        self.execute(
+            """
+            INSERT INTO ack_baselines(reminder_id,local_date,user_ok_count,created_at,updated_at)
+            VALUES (?,?,?,?,?)
+            ON CONFLICT(reminder_id,local_date) DO UPDATE SET
+              user_ok_count=excluded.user_ok_count,
+              updated_at=excluded.updated_at
+            """,
+            (reminder_id, local_date, int(user_ok_count), now, now),
+        )
 
 
 @dataclass
@@ -979,14 +1005,18 @@ class ReminderEngine:
                 error_text=(result.stderr or result.stdout or "Send failed")[:1000],
             )
 
-    def check_desktop_ack(self, reminder: Dict[str, Any], local_date: str) -> bool:
+    def check_desktop_ack(self, reminder: Dict[str, Any], local_date: str) -> tuple[bool, int]:
         phone = (reminder.get("phone") or "").strip()
         if not phone or not Path(ZALO_CHECK_ACK_SH).exists():
-            return False
+            return (False, 0)
         ack_text = (str(reminder.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT)
         rr = run_cmd(["bash", ZALO_CHECK_ACK_SH, phone, ack_text], timeout=90)
         out = f"{rr.stdout}\n{rr.stderr}".lower()
         found = rr.ok and ("ack_found=1" in out)
+        user_ok_count = 0
+        m = re.search(r"user_ok_count=(\d+)", out)
+        if m:
+            user_ok_count = int(m.group(1))
         self.store.add_log(
             "ack_probe",
             account_id=reminder.get("account_id") or "default",
@@ -996,7 +1026,7 @@ class ReminderEngine:
             message_text=(rr.stdout or "")[:500],
             error_text=(rr.stderr or "")[:500],
         )
-        return found
+        return (found, user_ok_count)
 
     def scheduler_loop(self):
         while not self.stop_event.is_set():
@@ -1029,27 +1059,37 @@ class ReminderEngine:
             if int(r.get("require_date_ack", 1)) == 1 and self.store.is_acked(reminder_id, local_date):
                 continue
 
-            # Desktop-only ACK detection path (for setups where API listener is unavailable).
-            if int(r.get("require_date_ack", 1)) == 1 and self.check_desktop_ack(r, local_date):
-                self.store.ack(reminder_id, local_date, "desktop-ack-detected")
-                self.store.add_log(
-                    "ack",
-                    account_id=r.get("account_id") or "default",
-                    reminder_id=reminder_id,
-                    target_id=int(r["target_id"]),
-                    local_date=local_date,
-                    message_text="desktop-ack-detected",
-                )
-                self.send_ack_confirmation(r, local_date)
-                continue
-
             retry_min = max(1, int(r.get("retry_interval_min", DEFAULT_RETRY_MIN)))
             last_scheduled = self.store.last_send_at(reminder_id, local_date, event_type="send")
 
-            if last_scheduled is None:
-                # First scheduled send of the day: send as soon as we pass trigger time.
+            if last_scheduled is None or last_scheduled.astimezone(tz) < trigger:
+                # First scheduled send of the current window: send first, then set baseline OK-count.
                 self.send_reminder(r, reason="scheduled")
+                if int(r.get("require_date_ack", 1)) == 1:
+                    _, ok_count = self.check_desktop_ack(r, local_date)
+                    self.store.set_ack_baseline(reminder_id, local_date, ok_count)
                 continue
+
+            # Desktop-only ACK detection path with baseline guard (avoid matching old "ok").
+            if int(r.get("require_date_ack", 1)) == 1:
+                found, ok_count = self.check_desktop_ack(r, local_date)
+                baseline = self.store.get_ack_baseline(reminder_id, local_date)
+                if baseline is None:
+                    self.store.set_ack_baseline(reminder_id, local_date, ok_count)
+                    baseline = ok_count
+
+                if found and ok_count > baseline:
+                    self.store.ack(reminder_id, local_date, "desktop-ack-detected")
+                    self.store.add_log(
+                        "ack",
+                        account_id=r.get("account_id") or "default",
+                        reminder_id=reminder_id,
+                        target_id=int(r["target_id"]),
+                        local_date=local_date,
+                        message_text=f"desktop-ack-detected (ok_count={ok_count}, baseline={baseline})",
+                    )
+                    self.send_ack_confirmation(r, local_date)
+                    continue
 
             delta = datetime.now(timezone.utc) - last_scheduled.astimezone(timezone.utc)
             if delta >= timedelta(minutes=retry_min):
