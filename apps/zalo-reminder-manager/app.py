@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 import json
 import os
 import re
@@ -18,7 +19,7 @@ from zoneinfo import ZoneInfo
 APP_TZ = "Asia/Ho_Chi_Minh"
 DEFAULT_RETRY_MIN = 30
 DEFAULT_DAILY_TIME = "08:00"
-DEFAULT_ACK_TEXT = "ok đã xong"
+DEFAULT_ACK_TEXT = "xong"
 DB_PATH = Path(os.environ.get("ZALO_REMINDER_DB", Path(__file__).with_name("reminders.db")))
 OPENCLAW_BIN = os.environ.get("OPENCLAW_BIN", "/home/manduong/.nvm/versions/node/v24.13.1/bin/openclaw")
 ZCA_BIN = os.environ.get("ZCA_BIN", "zca")
@@ -106,7 +107,7 @@ INDEX_HTML = r"""
         <input id="rTime" type="time" value="08:00"/>
         <input id="rTz" value="Asia/Ho_Chi_Minh"/>
         <input id="rRetry" type="number" min="5" value="30" style="width:90px"/>
-        <input id="rAck" value="ok đã xong" placeholder="Reply để dừng (mặc định: ok đã xong)" style="min-width:220px"/>
+        <input id="rAck" value="xong" placeholder="Keyword xác nhận (mặc định: xong)" style="min-width:220px"/>
         <label><input id="rNeedAck" type="checkbox" checked/> Cần xác nhận</label>
         <label><input id="rActive" type="checkbox" checked/> Active</label>
       </div>
@@ -236,7 +237,7 @@ async function loadReminders(){
       <td>${esc(r.title)}</td>
       <td>${esc(r.target_name||'')}<br><span class='muted'>${esc(r.phone||'')}</span></td>
       <td>${esc(r.daily_time)}<br><span class='muted'>${esc(r.timezone)} · ${r.retry_interval_min}p</span></td>
-      <td>${esc((r.message_template||'').slice(0,120))}<br><span class='muted'>Ack: ${esc(r.ack_text||'ok đã xong')}</span></td>
+      <td>${esc((r.message_template||'').slice(0,120))}<br><span class='muted'>Ack keyword: ${esc(r.ack_text||'xong')}</span></td>
       <td>${r.active? '✅':'❌'} ${r.require_date_ack? '<span class="pill">cần xác nhận</span>':''}</td>
       <td>
         <button class='secondary' onclick='pickReminder(${r.id})'>Sửa</button>
@@ -254,7 +255,7 @@ async function pickReminder(id){
   const r = rows.find(x=>x.id===id); if(!r) return;
   edit.reminderId=id;
   rTitle.value=r.title||''; rTarget.value=r.target_id; rTime.value=r.daily_time||'08:00'; rTz.value=r.timezone||'Asia/Ho_Chi_Minh'; rRetry.value=r.retry_interval_min||30;
-  rAck.value=r.ack_text||'ok đã xong'; rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
+  rAck.value=r.ack_text||'xong'; rNeedAck.checked=!!r.require_date_ack; rActive.checked=!!r.active; rMsg.value=r.message_template||'';
 }
 
 async function saveReminder(){
@@ -272,7 +273,7 @@ async function saveReminder(){
   };
   if(!body.title || !body.target_id) return alert('Thiếu tên nhắc hẹn hoặc người nhận');
   await api('/api/reminders', {method:'POST', body: JSON.stringify(body)});
-  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rAck.value='ok đã xong'; rNeedAck.checked=true; rActive.checked=true;
+  edit.reminderId=null; rTitle.value=''; rMsg.value=''; rTime.value='08:00'; rTz.value='Asia/Ho_Chi_Minh'; rRetry.value=30; rAck.value='xong'; rNeedAck.checked=true; rActive.checked=true;
   await refreshAll();
 }
 
@@ -733,21 +734,33 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").strip().lower())
 
 
-def ack_matches(text: str, ack_text: str, today_local: datetime.date) -> bool:
+def daily_ack_code(reminder_id: int, local_date: str) -> str:
+    seed = f"{reminder_id}:{local_date}:zalo-reminder"
+    h = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+    return str((int(h[:8], 16) % 9000) + 1000)
+
+
+def expected_ack_phrase(reminder: Dict[str, Any], local_date: str) -> str:
+    keyword = normalize_text(str(reminder.get("ack_text") or DEFAULT_ACK_TEXT))
+    keyword = keyword.split(" ")[0] if keyword else DEFAULT_ACK_TEXT
+    if len(keyword) < 3:
+        keyword = DEFAULT_ACK_TEXT
+    code = daily_ack_code(int(reminder["id"]), local_date)
+    return f"{keyword} {code}"
+
+
+def ack_matches(text: str, expected_phrase: str, today_local: datetime.date) -> bool:
     t = normalize_text(text)
     if not t:
         return False
 
-    token = (ack_text or DEFAULT_ACK_TEXT).strip()
-    if not token:
-        token = DEFAULT_ACK_TEXT
-
-    token_norm = normalize_text(token)
-    token_today = normalize_text(token.replace("{date}", today_local.strftime("%d/%m/%Y")))
-    token_today_iso = normalize_text(token.replace("{date}", today_local.isoformat()))
-
-    if t in {token_norm, token_today, token_today_iso}:
-        return True
+    token_norm = normalize_text(expected_phrase or "")
+    if token_norm:
+        if t == token_norm:
+            return True
+        esc = re.escape(token_norm)
+        if re.search(rf"(^|\s){esc}(\s|$)", t):
+            return True
 
     # backward compatibility: accept "<date> đã xong"
     m = re.fullmatch(r"(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})\s+(đã xong|da xong)", t)
@@ -949,8 +962,9 @@ class ReminderEngine:
                 now_local = datetime.now(timezone.utc).astimezone(ZoneInfo(APP_TZ))
             today_local = now_local.date()
 
-            if ack_matches(content, str(r.get("ack_text") or DEFAULT_ACK_TEXT), today_local):
-                local_date = today_local.isoformat()
+            local_date = today_local.isoformat()
+            expected = expected_ack_phrase(r, local_date)
+            if ack_matches(content, expected, today_local):
                 self.store.ack(int(r["id"]), local_date, content)
                 self.store.add_log(
                     "ack",
@@ -1014,12 +1028,11 @@ class ReminderEngine:
                 error_text=(result.stderr or result.stdout or "Send failed")[:1000],
             )
 
-    def check_desktop_ack(self, reminder: Dict[str, Any], local_date: str) -> tuple[bool, int]:
+    def check_desktop_ack(self, reminder: Dict[str, Any], local_date: str, expected_phrase: str) -> tuple[bool, int]:
         phone = (reminder.get("phone") or "").strip()
         if not phone or not Path(ZALO_CHECK_ACK_SH).exists():
             return (False, 0)
-        ack_text = (str(reminder.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT)
-        rr = run_cmd(["bash", ZALO_CHECK_ACK_SH, phone, ack_text], timeout=90)
+        rr = run_cmd(["bash", ZALO_CHECK_ACK_SH, phone, expected_phrase], timeout=90)
         out = f"{rr.stdout}\n{rr.stderr}".lower()
         found = rr.ok and ("ack_found=1" in out)
         user_ok_count = 0
@@ -1032,7 +1045,7 @@ class ReminderEngine:
             reminder_id=int(reminder["id"]),
             target_id=int(reminder["target_id"]),
             local_date=local_date,
-            message_text=(rr.stdout or "")[:500],
+            message_text=(f"EXPECT={expected_phrase}\n" + (rr.stdout or ""))[:500],
             error_text=(rr.stderr or "")[:500],
         )
         return (found, user_ok_count)
@@ -1075,13 +1088,15 @@ class ReminderEngine:
                 # First scheduled send of the current window: send first, then set baseline OK-count.
                 self.send_reminder(r, reason="scheduled")
                 if int(r.get("require_date_ack", 1)) == 1:
-                    _, ok_count = self.check_desktop_ack(r, local_date)
+                    expected = expected_ack_phrase(r, local_date)
+                    _, ok_count = self.check_desktop_ack(r, local_date, expected)
                     self.store.set_ack_baseline(reminder_id, local_date, ok_count)
                 continue
 
-            # Desktop-only ACK detection path with baseline guard (avoid matching old "ok").
+            # Desktop-only ACK detection path with baseline guard and daily code.
             if int(r.get("require_date_ack", 1)) == 1:
-                found, ok_count = self.check_desktop_ack(r, local_date)
+                expected = expected_ack_phrase(r, local_date)
+                found, ok_count = self.check_desktop_ack(r, local_date, expected)
                 baseline = self.store.get_ack_baseline(reminder_id, local_date)
                 if baseline is None:
                     self.store.set_ack_baseline(reminder_id, local_date, ok_count)
@@ -1124,16 +1139,20 @@ class ReminderEngine:
         local_date = now_local.date().isoformat()
         date_text = now_local.strftime("%d/%m/%Y")
 
-        ack_text = (str(reminder.get("ack_text") or DEFAULT_ACK_TEXT).strip() or DEFAULT_ACK_TEXT)
-        ack_hint = ack_text.replace("{date}", date_text)
+        expected = expected_ack_phrase(reminder, local_date)
+        keyword, code = expected.split(" ", 1)
+
         default_msg = (
             f"[{reminder.get('title','Nhắc hẹn')}]\n"
-            f"Hôm nay ({date_text}) nhớ thực hiện việc đã hẹn.\n"
-            f"Vui lòng phản hồi để em dừng nhắc trong hôm nay."
+            f"Hôm nay ({date_text}) nhớ thực hiện việc đã hẹn."
         )
         body = (reminder.get("message_template") or "").strip() or default_msg
-        if "xác nhận hôm nay" not in body.lower() and "xac nhan hom nay" not in body.lower():
-            body += "\n\nXác nhận hôm nay: (reply theo cú pháp đã thống nhất)"
+
+        if int(reminder.get("require_date_ack", 1)) == 1:
+            body += (
+                f"\n\nMã xác nhận hôm nay: {code}"
+                f"\nKhi xong, nhắn: {keyword.upper()} + MÃ"
+            )
 
         # Prefer local desktop Zalo send flow (human-like UI automation) when phone is available.
         phone = (reminder.get("phone") or "").strip()

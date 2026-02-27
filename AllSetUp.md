@@ -1142,3 +1142,37 @@ systemctl --user restart zalo-reminder-manager.service
 ### Verification
 - service restarted successfully.
 - reminder state reset for clean re-test.
+
+## [2026-02-27 08:39:10 UTC] Final redesign of ACK flow: daily code confirmation (anti-loop)
+
+### Why
+Current OCR-based `ok`/plain-text ACK was too noisy and caused false stop / endless loop behavior.
+
+### What changed
+- `app.py` redesigned ACK strategy:
+  - Default `ack_text` is now keyword `xong`.
+  - For each reminder/day, system generates deterministic 4-digit code from `(reminder_id, local_date)`.
+  - Expected ACK phrase is now: `xong <code>` (example: `xong 5760`).
+  - Reminder message now includes:
+    - `Mã xác nhận hôm nay: <code>`
+    - `Khi xong, nhắn: XONG + MÃ`
+    - and does **not** echo the exact full phrase to avoid OCR self-match.
+- Desktop ACK probe now receives full expected phrase (`xong <code>`) and logs `EXPECT=...` for debugging.
+- Inbound matcher (when listener available) also checks against the same expected phrase.
+- `ocr_ack_check.js` improved:
+  - short ack phrases are rejected;
+  - adds compact-match fallback for OCR spacing errors.
+- UI defaults updated to keyword mode (`xong`).
+
+### Runtime reset
+- Reminder #1 reconfigured and reset:
+  - `active=1`, `daily_time=15:00`, `retry_interval_min=1`, `ack_text='xong'`, `start_date=today`
+  - cleared today's `daily_acks` and `ack_baselines`.
+
+### Verification
+- Computed today expected phrase: `xong 5760`.
+- `run_zalo_check_ack.sh "0913885625" "xong 5760"` returns `ACK_FOUND=0` before user confirms (correct).
+
+### Rollback
+- Revert `app.py` and `scripts/ocr_ack_check.js` to previous commit.
+- Restart `zalo-reminder-manager.service`.

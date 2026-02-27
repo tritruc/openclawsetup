@@ -45,6 +45,15 @@ function norm(s) {
   userOkCount = hits.length;
   found = userOkCount > 0;
 
+  if (!found) {
+    const compactT = t.replace(/\s+/g, '');
+    const compactAck = ackNorm.replace(/\s+/g, '');
+    if (compactAck.length >= 4 && compactT.includes(compactAck)) {
+      found = true;
+      userOkCount = Math.max(userOkCount, 1);
+    }
+  }
+
   console.log(`ACK_FOUND=${found ? 1 : 0}`);
   console.log(`USER_OK_COUNT=${userOkCount}`);
   console.log(`OCR_TEXT=${t.slice(0, 800)}`);
