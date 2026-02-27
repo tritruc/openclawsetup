@@ -1129,11 +1129,11 @@ class ReminderEngine:
         default_msg = (
             f"[{reminder.get('title','Nhắc hẹn')}]\n"
             f"Hôm nay ({date_text}) nhớ thực hiện việc đã hẹn.\n"
-            f"Vui lòng trả lời: \"{ack_hint}\" để em dừng nhắc trong hôm nay."
+            f"Vui lòng phản hồi để em dừng nhắc trong hôm nay."
         )
         body = (reminder.get("message_template") or "").strip() or default_msg
-        if ack_hint.lower() not in body.lower():
-            body += f"\n\nXác nhận hôm nay: {ack_hint}"
+        if "xác nhận hôm nay" not in body.lower() and "xac nhan hom nay" not in body.lower():
+            body += "\n\nXác nhận hôm nay: (reply theo cú pháp đã thống nhất)"
 
         # Prefer local desktop Zalo send flow (human-like UI automation) when phone is available.
         phone = (reminder.get("phone") or "").strip()

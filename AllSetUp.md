@@ -1124,3 +1124,21 @@ systemctl --user restart zalo-reminder-manager.service
 
 ### Rollback
 - Revert app.py / ocr_ack_check.js / README and restart service.
+
+## [2026-02-27 08:26:35 UTC] Removed ACK phrase echo from reminder messages (prevent self-match false stops)
+
+### Problem
+- OCR ACK detection looked for `ack_text` in chat image.
+- Reminder message itself previously echoed the same phrase, causing self-content contamination and unstable stop behavior.
+
+### Fix
+- Updated `send_reminder()` text generation in `app.py`:
+  - no longer appends exact ack phrase into outgoing reminder body,
+  - uses generic confirmation line instead.
+- Kept ack phrase as external/shared rule (`ack_text='ok đã xong'`) for detector.
+- Reset today state for reminder #1:
+  - cleared `daily_acks` and `ack_baselines`, re-enabled active.
+
+### Verification
+- service restarted successfully.
+- reminder state reset for clean re-test.
