@@ -987,7 +987,7 @@ class ReminderEngine:
         phone = (reminder.get("phone") or "").strip()
         is_group = int(reminder.get("is_group", 0)) == 1
 
-        body = f"✅ Đã nhận xác nhận. Em sẽ dừng nhắc trong hôm nay ({local_date})."
+        body = f"✅ Đã xác nhận dừng nhắc trong hôm nay ({local_date})."
 
         result: RunResult
         if phone and Path(ZALO_SEND_SH).exists():

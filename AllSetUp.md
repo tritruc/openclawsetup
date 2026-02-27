@@ -1176,3 +1176,20 @@ Current OCR-based `ok`/plain-text ACK was too noisy and caused false stop / endl
 ### Rollback
 - Revert `app.py` and `scripts/ocr_ack_check.js` to previous commit.
 - Restart `zalo-reminder-manager.service`.
+
+## [2026-02-27 08:53:17 UTC] Confirmation reply wording finalized after valid ACK
+
+### What changed
+- Updated `apps/zalo-reminder-manager/app.py` confirmation message sent after valid ACK detection.
+- New confirmation text:
+  - `✅ Đã xác nhận dừng nhắc trong hôm nay (<date>).`
+
+### Why
+- Match explicit product requirement: when user sends valid code/ACK, system must reply clearly that reminder has been confirmed and stopped.
+
+### Verification
+- `python3 -m py_compile apps/zalo-reminder-manager/app.py` OK
+- `zalo-reminder-manager.service` restarted and `active`
+
+### Rollback
+- Revert confirmation string in `send_ack_confirmation()` and restart service.
