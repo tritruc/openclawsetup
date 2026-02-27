@@ -753,6 +753,26 @@ Ledger entry template:
 
 ---
 
+### 2026-02-27 01:11 UTC — Update Windows Startup BAT to open Ubuntu terminal and bootstrap OpenClaw
+- Why: owner requested that on Windows login it should auto-open Ubuntu terminal so OpenClaw can run reliably.
+- Commands:
+  - `write scripts/OpenClaw-Autostart.bat` (new logic: open Windows Terminal -> Ubuntu -> run startup commands -> keep shell open)
+  - `cp scripts/OpenClaw-Autostart.bat "/mnt/c/Users/ADMIN/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/OpenClaw-Autostart.bat"`
+  - Test command: `/mnt/c/Windows/System32/wsl.exe -d Ubuntu -- bash -lc "export PATH=...; cd /home/manduong/.openclaw/workspace; (systemctl --user start openclaw-gateway.service || ~/.nvm/versions/node/v24.13.1/bin/openclaw gateway start || true); systemctl --user start zalo-reminder-manager.service >/dev/null 2>&1 || true; echo '[OpenClaw] Startup done.'"`
+- Files/paths touched:
+  - `scripts/OpenClaw-Autostart.bat`
+  - `C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\OpenClaw-Autostart.bat`
+- Capability impact:
+  - On Windows login, Startup BAT opens Ubuntu terminal and runs OpenClaw bootstrap commands.
+  - Keeps terminal open (`exec bash`) so owner can see runtime output immediately.
+- Verification:
+  - Manual run of WSL bootstrap command returned: `[OpenClaw] Startup done.`
+  - Startup BAT file updated in Windows Startup folder.
+- Rollback:
+  - Restore previous BAT content, or delete Startup BAT from Startup folder.
+- GitHub push status:
+  - PENDING (next step commit+push in this session).
+
 ## 7) Secret handling checklist (do not skip)
 
 Never commit these raw values:
