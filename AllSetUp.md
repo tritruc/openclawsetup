@@ -799,7 +799,7 @@ Ledger entry template:
 - Rollback:
   - Restore previous BAT using `wt.exe` path if desired.
 - GitHub push status:
-  - PENDING (commit/push follows immediately).
+  - SUCCESS (commit `b2169a4` pushed to `origin/main`).
 
 ## 7) Secret handling checklist (do not skip)
 
