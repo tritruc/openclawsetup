@@ -801,6 +801,31 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (commit `b2169a4` pushed to `origin/main`).
 
+### 2026-02-27 01:29 UTC — Auto-launch OpenClaw TUI bound to Telegram session on Windows startup
+- Why: owner requested that after boot, terminal should go straight into OpenClaw TUI and be linked to Telegram bot session.
+- Commands:
+  - `write scripts/autostart_openclaw_tui.sh`
+  - `chmod +x scripts/autostart_openclaw_tui.sh`
+  - `write scripts/OpenClaw-Autostart.bat`
+  - `cp scripts/OpenClaw-Autostart.bat "C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\OpenClaw-Autostart.bat"`
+  - smoke test: `OPENCLAW_TUI_BOOT_MESSAGE="✅ TUI autostart test: Telegram session linked" timeout 35s scripts/autostart_openclaw_tui.sh`
+- Files/paths touched:
+  - `scripts/autostart_openclaw_tui.sh`
+  - `scripts/OpenClaw-Autostart.bat`
+  - `C:\Users\ADMIN\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\OpenClaw-Autostart.bat`
+- Capability impact:
+  - On Windows login, startup now opens Ubuntu and runs OpenClaw TUI automatically.
+  - TUI default session pinned to Telegram direct session: `agent:main:telegram:direct:6542038310`.
+  - TUI launched with `--deliver`, so replies from TUI are delivered to Telegram route.
+- Verification:
+  - TUI smoke output showed active session: `session telegram:direct:6542038310 (openclaw-tui)`.
+  - `openclaw health --json` lists recent session key `agent:main:telegram:direct:6542038310`.
+- Rollback:
+  - Restore previous `scripts/OpenClaw-Autostart.bat`.
+  - Remove `scripts/autostart_openclaw_tui.sh` from startup flow.
+- GitHub push status:
+  - PENDING (commit/push follows immediately).
+
 ## 7) Secret handling checklist (do not skip)
 
 Never commit these raw values:
