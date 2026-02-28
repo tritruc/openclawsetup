@@ -1220,3 +1220,23 @@ systemctl --user restart openclaw-gateway.service
 openclaw config set agents.defaults.timeoutSeconds 600
 systemctl --user restart openclaw-gateway.service
 ```
+
+## [2026-02-28 13:06:51 UTC] Change: Cài RustDesk để điều khiển máy từ điện thoại
+
+- **What changed + why**
+  - Cài RustDesk bản mới nhất bằng `winget` để bật khả năng remote desktop từ điện thoại.
+- **Exact commands run**
+  - `winget install --id RustDesk.RustDesk -e --accept-package-agreements --accept-source-agreements`
+  - Kiểm tra ID: `C:\Users\ADMIN\AppData\Local\rustdesk\rustdesk.exe --get-id`
+- **Files/config paths touched**
+  - Binary: `C:\Users\ADMIN\AppData\Local\rustdesk\rustdesk.exe`
+  - Config/log: `C:\Users\ADMIN\AppData\Roaming\rustdesk\`
+- **Impact on capabilities**
+  - Máy đã có RustDesk client, có thể lấy ID để kết nối từ thiết bị khác.
+  - Chưa hoàn tất `--install-service` (cần quyền admin/UAC) nên chưa set được mật khẩu cố định cho unattended access bằng CLI.
+- **Verification result**
+  - `winget` báo `Successfully installed`.
+  - Lấy được ID RustDesk: `238938465`.
+- **Rollback steps**
+  - Gỡ bằng: `winget uninstall --id RustDesk.RustDesk -e`
+  - Xóa dữ liệu cấu hình (nếu cần): `C:\Users\ADMIN\AppData\Roaming\rustdesk\`
