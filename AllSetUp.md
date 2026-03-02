@@ -1240,3 +1240,28 @@ systemctl --user restart openclaw-gateway.service
 - **Rollback steps**
   - Gỡ bằng: `winget uninstall --id RustDesk.RustDesk -e`
   - Xóa dữ liệu cấu hình (nếu cần): `C:\Users\ADMIN\AppData\Roaming\rustdesk\`
+
+## [2026-03-02 05:18:25 UTC] Change: Gỡ AnyDesk (bản portable) khỏi máy
+
+- **What changed + why**
+  - Gỡ AnyDesk theo yêu cầu người dùng vì không dùng trong luồng hiện tại (đang dùng UltraViewer/RustDesk).
+- **Exact commands run**
+  - Stop process + cleanup shortcut (PowerShell):
+    - `Get-Process AnyDesk | Stop-Process -Force`
+    - `Remove-Item -Recurse -Force 'C:\Users\ADMIN\AppData\Local\AnyDeskPortable'`
+    - `Remove-Item 'C:\Users\Public\Desktop\AnyDesk.lnk'`
+    - `Remove-Item 'C:\Users\ADMIN\Desktop\AnyDesk.lnk'`
+  - Xóa file còn sót bằng WSL:
+    - `rm -f /mnt/c/Users/ADMIN/AppData/Local/AnyDeskPortable/AnyDesk.exe`
+    - `rmdir /mnt/c/Users/ADMIN/AppData/Local/AnyDeskPortable`
+- **Files/config paths touched**
+  - `C:\Users\ADMIN\AppData\Local\AnyDeskPortable\`
+  - Desktop shortcuts AnyDesk (nếu tồn tại)
+- **Impact on capabilities**
+  - Máy không còn AnyDesk để remote nữa.
+  - Không ảnh hưởng UltraViewer/RustDesk.
+- **Verification result**
+  - `Get-Process AnyDesk` trả về 0 process.
+  - Thư mục `AnyDeskPortable` đã bị xóa.
+- **Rollback steps**
+  - Cài lại AnyDesk nếu cần: tải bản mới từ trang chính thức hoặc qua winget (nếu package khả dụng trên máy).
