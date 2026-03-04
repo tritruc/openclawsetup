@@ -1296,3 +1296,45 @@ systemctl --user restart openclaw-gateway.service
   - Kiểm tra cho thấy `docker` chưa được cài (`command not found`).
 - **Rollback steps**
   - `rm -rf /home/manduong/.openclaw/workspace/openclaw-n8n-stack`
+
+## [2026-03-04 03:12 UTC] Change: Hoàn tất cài Docker Desktop + dựng stack `openclaw-n8n-stack`
+
+- **What changed + why**
+  - Hoàn tất cài Docker Desktop để chạy stack `openclaw-n8n-stack` theo yêu cầu.
+  - Khởi chạy stack gồm `n8n` + `openclaw` trong container.
+  - Sửa compose command để chạy được trong môi trường container (ban đầu lỗi `spawn git` và dùng sai subcommand).
+- **Exact commands run**
+  - Cài Docker Desktop (Windows):
+    - `winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements --interactive`
+  - Xác minh Docker Engine:
+    - `docker.exe version`
+    - `docker.exe info`
+  - Chuẩn bị stack trên Windows path để Docker compose dùng ổn định:
+    - `rsync -a --delete /home/manduong/.openclaw/workspace/openclaw-n8n-stack/ /mnt/c/temp/openclaw-n8n-stack/`
+  - Chạy stack:
+    - `docker compose up -d` (trong `C:\temp\openclaw-n8n-stack`)
+  - Sửa `docker-compose.yml` cho service `openclaw`:
+    - thêm cài `git ca-certificates` trước `npm install -g openclaw`
+    - đổi lệnh từ `openclaw gateway start ...`/`openclaw gateway --config ...` sang:
+      - `openclaw gateway run --port 3456 --allow-unconfigured`
+- **Files/config paths touched**
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/docker-compose.yml`
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/.env`
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/config/openclaw.json`
+  - `C:\temp\openclaw-n8n-stack\*` (bản mirror để compose chạy trên Docker Desktop)
+- **Impact on capabilities**
+  - Máy có Docker Desktop chạy được container.
+  - `n8n` đã lên cổng `5678` (HTTP OK).
+  - `openclaw` container đã chạy tiến trình gateway trên cổng `3456` (WebSocket endpoint, không trả HTML HTTP thường).
+- **Verification result**
+  - `winget list --id Docker.DockerDesktop` hiển thị `4.63.0`.
+  - `docker info` có server/engine hoạt động.
+  - `docker compose ps`:
+    - `n8n-workflows` Up, map `5678:5678`
+    - `openclaw-gateway` Up, map `3456:3456`
+  - `curl -I http://127.0.0.1:5678` trả `HTTP/1.1 200 OK`.
+- **Rollback steps**
+  - Dừng và xoá stack:
+    - `docker compose down -v` trong `C:\temp\openclaw-n8n-stack`
+  - Gỡ Docker Desktop nếu cần:
+    - `winget uninstall --id Docker.DockerDesktop -e`
