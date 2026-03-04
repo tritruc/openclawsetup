@@ -1429,3 +1429,55 @@ mv /home/manduong/.config/systemd/user/zalo-reminder-manager.service.disabled /h
 systemctl --user daemon-reload
 systemctl --user enable --now zalo-reminder-manager.service
 ```
+
+## [2026-03-04 11:28:58 UTC] Change: Cài global bmalph + tích hợp BMAD dashboard vào project `xo-web`
+
+### What changed + why
+- Boss yêu cầu cài và tích hợp luôn luồng BMAD có dashboard theo dõi realtime.
+- Đã cài `bmalph` global (CLI glue BMAD + Ralph), tích hợp vào repo `xo-web`, và cài thêm `jq` để Ralph monitor chạy được.
+
+### Exact commands run
+```bash
+npm install -g bmalph
+bmalph --version
+
+# Trong project xo-web
+cd /home/manduong/.openclaw/workspace/xo-web
+bmalph init --platform codex --name xo-web --description "XO infinite mobile game"
+bmalph doctor
+bmalph status
+bmalph run
+
+# Fix dependency cho Ralph
+brew install jq
+```
+
+### Files/config paths touched
+- Global npm: `bmalph@2.7.0`
+- Linuxbrew: `jq@1.8.1`
+- Project repo: `/home/manduong/.openclaw/workspace/xo-web/`
+  - `._bmad/`, `.ralph/`, `bmalph/config.json`, `.agents/skills/...`, `AGENTS.md`, `.gitignore`
+
+### Impact on capabilities
+- Có thể chạy workflow BMAD + monitor dashboard trong project `xo-web`.
+- Có thể dùng `bmalph status/doctor/run` để theo dõi tiến trình chuẩn BMAD.
+- Project đã tích hợp asset/commands cho Codex platform.
+
+### Verification result
+- `bmalph --version` => `2.7.0`
+- `bmalph doctor` => `18 passed, all checks OK` (sau khi cài jq)
+- `bmalph status` hiển thị phase planning.
+- `bmalph run` hiển thị RALPH MONITOR live dashboard.
+
+### Known note
+- Log hiện tại của Ralph hiển thị text "starting with Claude Code" dù driver/platform là `codex`; cần điều chỉnh thêm ở upstream bmalph nếu muốn nhãn hiển thị đúng tuyệt đối.
+
+### Rollback steps
+```bash
+npm uninstall -g bmalph
+brew uninstall jq
+
+# Trong xo-web nếu muốn gỡ tích hợp
+cd /home/manduong/.openclaw/workspace/xo-web
+bmalph reset --force
+```
