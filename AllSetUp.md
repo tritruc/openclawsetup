@@ -1393,3 +1393,39 @@ winget uninstall --id heyhuynhgiabuu.ProxyPal -e
 # Remove config (optional)
 Remove-Item -Recurse -Force "$env:APPDATA\proxypal"
 ```
+
+## [2026-03-04 10:50:12 UTC] Change: Khóa vĩnh viễn service `zalo-reminder-manager` (chặn auto-click nền)
+
+### What changed + why
+- Boss yêu cầu khóa vĩnh viễn tiến trình nhắc Zalo chạy ngầm vì gây thao tác tự động bấm số `0913885625` và click UI không mong muốn.
+- Đã vô hiệu hóa autostart và gỡ unit file khỏi vị trí systemd user để tránh khởi chạy lại sau reboot.
+
+### Exact commands run
+```bash
+systemctl --user disable --now zalo-reminder-manager.service
+mv /home/manduong/.config/systemd/user/zalo-reminder-manager.service /home/manduong/.config/systemd/user/zalo-reminder-manager.service.disabled
+systemctl --user daemon-reload
+systemctl --user reset-failed
+systemctl --user is-enabled zalo-reminder-manager.service
+systemctl --user is-active zalo-reminder-manager.service
+```
+
+### Files/config paths touched
+- `/home/manduong/.config/systemd/user/zalo-reminder-manager.service` (renamed)
+- `/home/manduong/.config/systemd/user/zalo-reminder-manager.service.disabled`
+
+### Impact on capabilities
+- Reminder Manager Zalo không còn tự chạy nền nữa.
+- Không còn auto-focus/click/search số điện thoại trên desktop từ service này.
+
+### Verification result
+- `is-enabled` => `not-found`
+- `is-active` => `inactive`
+- Unit file ở trạng thái `.disabled` ngoài vị trí load của systemd.
+
+### Rollback steps
+```bash
+mv /home/manduong/.config/systemd/user/zalo-reminder-manager.service.disabled /home/manduong/.config/systemd/user/zalo-reminder-manager.service
+systemctl --user daemon-reload
+systemctl --user enable --now zalo-reminder-manager.service
+```
