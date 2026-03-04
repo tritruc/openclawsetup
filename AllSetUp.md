@@ -1338,3 +1338,58 @@ systemctl --user restart openclaw-gateway.service
     - `docker compose down -v` trong `C:\temp\openclaw-n8n-stack`
   - Gỡ Docker Desktop nếu cần:
     - `winget uninstall --id Docker.DockerDesktop -e`
+
+## [2026-03-04 07:05:56 UTC] Change: Cài ProxyPal trên Windows + cấu hình gateway local cho BMAD/OpenClaw
+
+### What changed + why
+- Cài ProxyPal desktop trên máy Windows để dùng chung nhiều subscription AI qua một OpenAI-compatible endpoint.
+- Thiết lập baseline an toàn hơn cho config management (chỉ local).
+- Tạo tài liệu mapping role cho BMAD dùng qua ProxyPal.
+
+### Exact commands run
+```bash
+# Download + install ProxyPal (Windows)
+Invoke-WebRequest -Uri "https://github.com/heyhuynhgiabuu/proxypal/releases/download/v0.4.8/ProxyPal_0.4.8_x64-setup.exe" -OutFile "C:\Users\ADMIN\Downloads\ProxyPal_0.4.8_x64-setup.exe"
+Start-Process -FilePath "C:\Users\ADMIN\Downloads\ProxyPal_0.4.8_x64-setup.exe" -ArgumentList "/S" -Wait
+
+# Launch app
+Start-Process -FilePath "C:\Users\ADMIN\AppData\Local\ProxyPal\proxypal.exe"
+
+# Harden local management scope (WSL edits on Windows config)
+sed -i 's/allow-remote: true/allow-remote: false/' /mnt/c/Users/ADMIN/AppData/Roaming/proxypal/proxy-config.yaml
+sed -i 's/restrict-management-to-localhost: false/restrict-management-to-localhost: true/' /mnt/c/Users/ADMIN/AppData/Roaming/proxypal/proxy-config.yaml
+
+# Restart app after config change
+Get-Process proxypal -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Process -FilePath "C:\Users\ADMIN\AppData\Local\ProxyPal\proxypal.exe"
+
+# Verify local API
+curl -H 'Authorization: Bearer proxypal-local' http://127.0.0.1:8317/v1/models
+```
+
+### Files/config paths touched
+- `C:\Users\ADMIN\Downloads\ProxyPal_0.4.8_x64-setup.exe`
+- `C:\Users\ADMIN\AppData\Local\ProxyPal\proxypal.exe`
+- `C:\Users\ADMIN\AppData\Roaming\proxypal\proxy-config.yaml`
+- `/home/manduong/.openclaw/workspace/docs/bmad-proxypal-role-map.md`
+
+### Impact on capabilities
+- Máy đã có ProxyPal chạy local tại `http://127.0.0.1:8317/v1`.
+- Có sẵn local API key `proxypal-local`.
+- BMAD/OpenAI-compatible coding client có thể dùng chung endpoint này để điều phối model theo role.
+- Lưu ý: hiện `v1/models` trả rỗng cho đến khi đăng nhập provider/subscription trong app ProxyPal.
+
+### Verification result
+- Tìm thấy executable: `C:\Users\ADMIN\AppData\Local\ProxyPal\proxypal.exe`
+- `curl` tới `http://127.0.0.1:8317/v1/models` trả HTTP 200.
+- Config hardening áp dụng: `allow-remote: false`, `restrict-management-to-localhost: true`.
+
+### Rollback steps
+```powershell
+# Uninstall
+winget uninstall --id heyhuynhgiabuu.ProxyPal -e
+# hoặc chạy uninstaller từ Apps & Features
+
+# Remove config (optional)
+Remove-Item -Recurse -Force "$env:APPDATA\proxypal"
+```
