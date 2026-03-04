@@ -1265,3 +1265,34 @@ systemctl --user restart openclaw-gateway.service
   - Thư mục `AnyDeskPortable` đã bị xóa.
 - **Rollback steps**
   - Cài lại AnyDesk nếu cần: tải bản mới từ trang chính thức hoặc qua winget (nếu package khả dụng trên máy).
+
+## [2026-03-04 02:42 UTC] Change: Cài và pre-config stack `openclaw-n8n-stack` (chuẩn bị sẵn để chạy)
+
+- **What changed + why**
+  - Clone repo `https://github.com/caprihan/openclaw-n8n-stack` vào workspace để có bộ OpenClaw + n8n self-host.
+  - Tạo sẵn file cấu hình runtime để có thể chạy ngay khi máy có Docker:
+    - `.env` (từ `.env.template`, đã random mật khẩu n8n)
+    - `config/openclaw.json` (từ `config/openclaw.example.json`)
+- **Exact commands run**
+  - `git clone https://github.com/caprihan/openclaw-n8n-stack.git`
+  - `cp -n .env.template .env`
+  - `cp -n config/openclaw.example.json config/openclaw.json`
+  - Python one-shot để set:
+    - `N8N_PASSWORD=<random strong>`
+    - `TIMEZONE=Asia/Ho_Chi_Minh`
+  - Kiểm tra môi trường container:
+    - `docker --version`
+    - `docker compose version`
+- **Files/config paths touched**
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/`
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/.env`
+  - `/home/manduong/.openclaw/workspace/openclaw-n8n-stack/config/openclaw.json`
+- **Impact on capabilities**
+  - Đã có full source + config để chạy stack AI agent + workflow automation.
+  - Chưa thể `docker compose up -d` vì máy hiện chưa có Docker CLI/Engine.
+- **Verification result**
+  - Repo clone thành công.
+  - `.env` và `openclaw.json` đã tồn tại.
+  - Kiểm tra cho thấy `docker` chưa được cài (`command not found`).
+- **Rollback steps**
+  - `rm -rf /home/manduong/.openclaw/workspace/openclaw-n8n-stack`
