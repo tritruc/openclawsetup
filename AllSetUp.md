@@ -1515,3 +1515,48 @@ bmalph reset --force
   - Xóa plugin: `rm -rf /home/manduong/.openclaw/extensions/bmad-method`
   - Bỏ config plugin/agent khỏi `~/.openclaw/openclaw.json` (plugins.load/entries, agents.list.bmad-master, tools.agentToAgent allow).
   - `openclaw gateway restart`
+
+## [2026-03-05T15:49:34Z] ProxyPal + Antigravity integration (owner request)
+
+### Why
+- Boss requested integrating **Antigravity** into existing **ProxyPal** routing because current auto-label/model reasoning quality was not strong enough.
+
+### What changed
+- Performed Antigravity OAuth login through local ProxyPal backend tool (`cli-proxy-api.exe`).
+- Started ProxyPal desktop app on Windows host and verified model registry now includes Antigravity-owned models.
+
+### Exact commands run
+```bash
+"/mnt/c/Users/ADMIN/AppData/Local/ProxyPal/cli-proxy-api.exe" \
+  -config "C:\\Users\\ADMIN\\AppData\\Roaming\\proxypal\\proxy-config.yaml" \
+  -antigravity-login -no-incognito
+
+/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command \
+  "Start-Process 'C:\\Users\\ADMIN\\AppData\\Local\\ProxyPal\\proxypal.exe'"
+
+curl -i -m 10 -H 'Authorization: Bearer proxypal-local' \
+  http://127.0.0.1:8317/v1/models
+```
+
+### Files / paths touched
+- **Credentials written by CLIProxyAPI** (OAuth token file):
+  - `C:\Users\ADMIN\.cli-proxy-api\antigravity-<account>.json`
+- Existing config used (no secret committed):
+  - `C:\Users\ADMIN\AppData\Roaming\proxypal\proxy-config.yaml`
+
+### Capability impact
+- ProxyPal endpoint `http://127.0.0.1:8317/v1` can now serve Antigravity models (e.g. Claude/Gemini variants routed via Antigravity).
+- OpenAI-compatible clients using `OPENAI_BASE_URL=http://127.0.0.1:8317/v1` and `OPENAI_API_KEY=proxypal-local` can access those models.
+
+### Verification
+- OAuth login returned success and stored Antigravity auth token.
+- `/v1/models` response contains entries with `"owned_by":"antigravity"` (e.g. `claude-opus-4-6-thinking`, `gemini-3.1-pro-high`, `gemini-2.5-flash`).
+
+### Rollback
+1. Remove Antigravity token file from `C:\Users\ADMIN\.cli-proxy-api\`.
+2. Restart ProxyPal app.
+3. Re-check `GET /v1/models` to confirm Antigravity models no longer listed.
+
+### Security notes
+- No raw OAuth tokens or API secrets were added to git.
+- Kept all secret-bearing data in local Windows user profile.
