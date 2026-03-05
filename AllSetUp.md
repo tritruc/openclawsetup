@@ -1481,3 +1481,37 @@ brew uninstall jq
 cd /home/manduong/.openclaw/workspace/xo-web
 bmalph reset --force
 ```
+
+## [2026-03-05 01:29 UTC] Change: Cài global BMAD_Openclaw plugin + cấu hình agent
+
+- **What changed + why**
+  - Cài plugin `BMAD_Openclaw` global để dùng BMAD native trong OpenClaw theo yêu cầu.
+  - Thêm cấu hình plugin/agent để có `bmad-master` điều phối BMAD workflows.
+  - Sau khi phát hiện Telegram route bị ảnh hưởng (default agent thành `bmad-master`), đã chỉnh lại để giữ `main` làm mặc định và `bmad-master` là agent phụ.
+- **Exact commands run**
+  - `mkdir -p /home/manduong/.openclaw/extensions`
+  - `git clone https://github.com/ErwanLorteau/BMAD_Openclaw.git /home/manduong/.openclaw/extensions/bmad-method`
+  - `cd /home/manduong/.openclaw/extensions/bmad-method && npm install`
+  - Python patch config `~/.openclaw/openclaw.json`:
+    - thêm `plugins.load.paths += ["~/.openclaw/extensions/bmad-method"]`
+    - bật `plugins.entries["bmad-method"].enabled=true`
+    - thêm `agents.list` gồm `main` + `bmad-master`
+    - bật `tools.agentToAgent.enabled=true`, allow `main,bmad-master`
+    - thêm `plugins.allow` explicit: `telegram`, `zalouser`, `bmad-method`
+  - `mkdir -p /home/manduong/.openclaw/workspace-bmad`
+  - `openclaw gateway restart`
+- **Files/config paths touched**
+  - `/home/manduong/.openclaw/extensions/bmad-method/`
+  - `/home/manduong/.openclaw/openclaw.json`
+  - `/home/manduong/.openclaw/workspace-bmad/`
+- **Impact on capabilities**
+  - Có BMAD plugin native với 7 tools (init/list/start/load/save/complete/get-state).
+  - Có thêm top-level agent `bmad-master` để chạy BMAD method.
+  - Giữ nguyên agent `main` để kênh chat thường (Telegram DM) hoạt động như trước.
+- **Verification result**
+  - `npm install` plugin thành công.
+  - `openclaw status` ghi nhận plugin BMad Method đã load và đăng ký 7 tools.
+- **Rollback steps**
+  - Xóa plugin: `rm -rf /home/manduong/.openclaw/extensions/bmad-method`
+  - Bỏ config plugin/agent khỏi `~/.openclaw/openclaw.json` (plugins.load/entries, agents.list.bmad-master, tools.agentToAgent allow).
+  - `openclaw gateway restart`
