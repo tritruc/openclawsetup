@@ -854,7 +854,7 @@ Ledger entry template:
   - Restore previous `scripts/autostart_openclaw_tui.sh` from git history.
   - Or remove lock/health logic and revert to fixed-binary implementation.
 - GitHub push status:
-  - PENDING (commit/push follows immediately).
+  - SUCCESS (commit `66b3a10` pushed to `origin/main`).
 
 ## 7) Secret handling checklist (do not skip)
 
