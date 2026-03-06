@@ -881,7 +881,7 @@ Ledger entry template:
   - `openclaw config unset channels.telegram.allowFrom`
   - Restart gateway.
 - GitHub push status:
-  - PENDING (commit/push follows immediately).
+  - SUCCESS (commit `cf5257c` pushed to `origin/main`).
 
 ## 7) Secret handling checklist (do not skip)
 
