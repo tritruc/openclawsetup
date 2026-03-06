@@ -826,6 +826,36 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (commit `d098436` pushed to `origin/main`).
 
+### 2026-03-06 01:48 UTC — Fix Telegram bot freeze + harden TUI autostart stability
+- Why: owner reported Telegram bot becoming unresponsive/"đơ"; runtime also had mixed OpenClaw versions and duplicate TUI risks.
+- Root cause observed:
+  - Gateway RPC probes timing out at 3s budget while service stayed up (status RPC took ~13.8s).
+  - Autostart script pinned old binary (`~/.nvm/.../openclaw` = 2026.2.25) while gateway runs 2026.2.26.
+  - Potential duplicate TUI launches could increase UI contention and perceived instability.
+- Commands:
+  - `systemctl --user restart openclaw-gateway.service`
+  - `systemctl --user status openclaw-gateway.service --no-pager`
+  - `openclaw channels logs --channel telegram --lines 120 --json`
+  - `message.send(channel=telegram,target=6542038310,...)`
+  - `write scripts/autostart_openclaw_tui.sh` (hardened version)
+  - `chmod +x scripts/autostart_openclaw_tui.sh`
+- Files/paths touched:
+  - `scripts/autostart_openclaw_tui.sh`
+- Capability impact:
+  - Telegram provider restarted cleanly; outbound send confirmed after restart.
+  - TUI autostart now prefers current `openclaw` from PATH (version-aligned with gateway), with fallback only if missing.
+  - Added duplicate-launch lock (`flock`) to prevent multiple TUI instances fighting focus/input.
+  - Added health-check with one-shot gateway restart fallback and lower default TUI history (`80`) for smoother runtime.
+- Verification:
+  - Service active after restart (`openclaw-gateway.service` running).
+  - Gateway log shows Telegram provider started and send success (`sendMessage ok chat=6542038310`).
+  - Direct message test success: `ok=true`, `messageId=2893`, `chatId=6542038310`.
+- Rollback:
+  - Restore previous `scripts/autostart_openclaw_tui.sh` from git history.
+  - Or remove lock/health logic and revert to fixed-binary implementation.
+- GitHub push status:
+  - PENDING (commit/push follows immediately).
+
 ## 7) Secret handling checklist (do not skip)
 
 Never commit these raw values:
