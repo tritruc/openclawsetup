@@ -1617,3 +1617,46 @@ curl -i -m 10 -H 'Authorization: Bearer proxypal-local' \
 ### Security notes
 - No raw OAuth tokens or API secrets were added to git.
 - Kept all secret-bearing data in local Windows user profile.
+
+## [2026-03-06 11:49 UTC] Change: Gỡ Antigravity khỏi ProxyPal (owner request)
+
+### What changed + why
+- Boss yêu cầu gỡ hẳn account Antigravity khỏi ProxyPal do account lỗi/không ổn định.
+- Mục tiêu: loại bỏ provider Antigravity khỏi auth store, giữ pipeline đang chạy bằng GPT-only (không dùng Gemini).
+
+### Exact commands run
+```bash
+# Backup rồi gỡ file auth Antigravity
+cp -f /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json   /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json.bak.20260306T114820Z
+rm -f /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json
+
+# Kiểm tra pipeline còn chạy
+ps -eo pid,etimes,cmd | grep -E "run_task2_data_pipeline|auto_label_with_gemini_task2_targeted.py" | grep -v grep
+
+# Kiểm tra GPT model qua ProxyPal vẫn hoạt động
+curl -s -m 20 -H "Authorization: Bearer proxypal-local" -H "Content-Type: application/json"   http://localhost:8317/v1/chat/completions   -d '{"model":"gpt-5.3-codex","messages":[{"role":"user","content":"ok? reply 1 word"}],"max_tokens":5}'
+```
+
+### Files/config paths touched
+- Removed auth file:
+  - `C:\Users\ADMIN\.cli-proxy-api\antigravity-manshpypro@gmail.com.json`
+- Backup created:
+  - `C:\Users\ADMIN\.cli-proxy-api\antigravity-manshpypro@gmail.com.json.bak.20260306T114820Z`
+
+### Impact on capabilities
+- ProxyPal không còn persistent Antigravity OAuth account.
+- Pipeline label hiện chạy GPT-only (`DISABLE_GEMINI=1`, model thực dùng `gpt-5.3-codex`) để tránh lỗi Gemini/Antigravity.
+
+### Verification result
+- File `antigravity-*.json` chính đã bị xóa; chỉ còn file backup.
+- Pipeline process vẫn chạy sau khi gỡ account.
+- Gọi test `gpt-5.3-codex` qua ProxyPal trả về thành công.
+
+### Rollback steps
+```bash
+# Khôi phục account Antigravity nếu cần
+cp -f /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json.bak.20260306T114820Z       /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json
+
+# (Tuỳ chọn) restart ProxyPal để nạp lại auth
+# Stop/Start proxypal/cli-proxy-api trên Windows host
+```
