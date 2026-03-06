@@ -856,6 +856,33 @@ Ledger entry template:
 - GitHub push status:
   - SUCCESS (commit `66b3a10` pushed to `origin/main`).
 
+### 2026-03-06 02:23 UTC — Telegram disconnect hardening (DM policy allowlist + session model stabilization)
+- Why: owner reported repeated Telegram bot disconnect / unstable replies.
+- Root cause observed:
+  - DM access was `dmPolicy: pairing` (pairing-code flow can appear intermittent after restarts/expired approvals).
+  - Telegram direct session model had drifted to `claude-opus-4.6`; switched back to stable `github-copilot/gpt-4.1` for this route.
+- Commands:
+  - `openclaw config set --strict-json channels.telegram.allowFrom '["6542038310"]'`
+  - `openclaw config set --strict-json channels.telegram.dmPolicy '"allowlist"'`
+  - `systemctl --user restart openclaw-gateway.service`
+  - `session_status(sessionKey='agent:main:telegram:direct:6542038310', model='github-copilot/gpt-4.1')`
+- Files/config touched:
+  - `~/.openclaw/openclaw.json`
+- Capability impact:
+  - Telegram DM auth is now deterministic for owner ID `6542038310` (no pairing-code dependency).
+  - Telegram direct session pinned to `github-copilot/gpt-4.1`.
+- Verification:
+  - `openclaw config get channels.telegram.dmPolicy` => `allowlist`
+  - `openclaw config get channels.telegram.allowFrom` => `["6542038310"]`
+  - Gateway restarted and active.
+  - Telegram outbound confirmed in logs (`sendMessage ok chat=6542038310 message=2903/2904`) and direct send tests succeed.
+- Rollback:
+  - `openclaw config set --strict-json channels.telegram.dmPolicy '"pairing"'`
+  - `openclaw config unset channels.telegram.allowFrom`
+  - Restart gateway.
+- GitHub push status:
+  - PENDING (commit/push follows immediately).
+
 ## 7) Secret handling checklist (do not skip)
 
 Never commit these raw values:
