@@ -1660,3 +1660,96 @@ cp -f /mnt/c/Users/ADMIN/.cli-proxy-api/antigravity-manshpypro@gmail.com.json.ba
 # (Tuỳ chọn) restart ProxyPal để nạp lại auth
 # Stop/Start proxypal/cli-proxy-api trên Windows host
 ```
+
+---
+
+## [2026-03-07T17:50:00Z] Oracle browser workflow hardening (WSL+Windows)
+
+### What changed + why
+- Boss yêu cầu tích hợp Oracle “chạy thật ổn định” trong luồng brainstorm (ChatGPT web, profile Man/Oracle), không dừng ở trạng thái lỗi login/attach.
+- Sự cố gốc:
+  1) `corepack` không có trên máy (`corepack: command not found`),
+  2) Oracle browser mode hay rơi vào lỗi cookie-sync/`ECONNREFUSED`/thinking-chip fail.
+- Đã triển khai hardening để đảm bảo workflow dùng được trong thực tế (có fallback tự phục hồi).
+
+### Exact commands run
+```bash
+# Verify tooling state
+which corepack || echo NO_COREPACK
+node -v
+npm -v
+npx -y pnpm -v
+
+# Build Oracle from source without corepack
+cd /home/manduong/.openclaw/workspace/oracle
+npx -y pnpm install
+npx -y pnpm build
+
+# Smoke Oracle browser workflow through project helper
+cd /home/manduong/.openclaw/workspace/web-product-review-nlp
+ORACLE_BROWSER_MANUAL_LOGIN=1 ORACLE_EXTRA_ARGS='--browser-timeout 2m' \
+  ./scripts/run_oracle_brainstorm.sh --topic login_probe5 --prompt 'reply exactly OK' \
+  --file data/shopee_bot/runs/latest_summary.json
+
+# Full Oracle brainstorm run with latest reports/code
+ORACLE_BROWSER_MANUAL_LOGIN=1 ./scripts/run_oracle_brainstorm.sh \
+  --topic latest_result_check_v2 \
+  --prompt "Dựa trên latest_summary.json và task2_guard_eval_report.md, hãy tóm tắt..." \
+  --file data/shopee_bot/runs/latest_summary.json \
+  --file results/pipelines/task2_guard_eval_report.md \
+  --file scripts/shopee_crawl_realtime_loop.sh \
+  --file scripts/crawl_shopee_reviews_via_browser.py \
+  --file src/crawler/shopee_cosmetics_bot.py
+```
+
+### Files/config paths touched
+- Oracle source patches:
+  - `/home/manduong/.openclaw/workspace/oracle/src/cli/browserConfig.ts`
+  - `/home/manduong/.openclaw/workspace/oracle/src/cli/browserDefaults.ts`
+  - `/home/manduong/.openclaw/workspace/oracle/src/config.ts`
+- Oracle runtime config (Windows):
+  - `C:\Users\ADMIN\.oracle\config.json`
+- Project integration scripts:
+  - `/home/manduong/.openclaw/workspace/web-product-review-nlp/scripts/run_oracle_brainstorm.sh`
+  - `/home/manduong/.openclaw/workspace/web-product-review-nlp/scripts/run_oracle_browser_windows.sh`
+  - `/home/manduong/.openclaw/workspace/web-product-review-nlp/scripts/patch_oracle_npx_cache.py`
+- Existing self-heal/fallback scripts retained:
+  - `scripts/auto_remediate_shopee_block.sh`
+  - `scripts/ensure_chrome_debug.sh`
+
+### Impact on capabilities
+- Oracle browser brainstorming now runs successfully end-to-end on host with profile session reuse.
+- Thinking-chip failure no longer hard-stops run (continues with default when chip absent).
+- Added resilient fallback path: if Oracle browser automation fails, auto-generate render bundle + copy clipboard + open ChatGPT tab.
+- Removed dependency on `corepack`; build path now uses `npx pnpm`.
+
+### Verification result
+- Oracle login probe succeeded (`reply exactly OK`) and saved output file:
+  - `reports/oracle/oracle_login_probe5__20260307T174847Z.md`
+- Full brainstorm run succeeded and produced actionable analysis:
+  - `reports/oracle/oracle_latest_result_check_v2__20260307T174936Z.md`
+- Previous recurring failures (`No ChatGPT cookies applied`, `thinking chip not found`) no longer block successful runs in this hardened flow.
+
+### Rollback steps
+```bash
+# Revert project helper scripts to previous commit
+cd /home/manduong/.openclaw/workspace
+# git checkout -- web-product-review-nlp/scripts/run_oracle_brainstorm.sh \
+#                  web-product-review-nlp/scripts/run_oracle_browser_windows.sh \
+#                  web-product-review-nlp/scripts/patch_oracle_npx_cache.py
+
+# Revert Oracle source changes
+# git checkout -- oracle/src/cli/browserConfig.ts oracle/src/cli/browserDefaults.ts oracle/src/config.ts
+
+# Reset Oracle runtime config on Windows
+cat > /mnt/c/Users/ADMIN/.oracle/config.json <<'JSON'
+{
+  "engine": "browser",
+  "browser": {
+    "manualLogin": true,
+    "keepBrowser": false
+  }
+}
+JSON
+```
+
