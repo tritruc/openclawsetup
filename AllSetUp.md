@@ -1753,3 +1753,20 @@ cat > /mnt/c/Users/ADMIN/.oracle/config.json <<'JSON'
 JSON
 ```
 
+### Git sync status
+- ✅ Pushed workspace repo: `openclawsetup` (commit `dc45a2a`)
+- ✅ Pushed project repo: `web-product-review-nlp` (commit `283f911`)
+- ⚠️ Push failed for forkless upstream `steipete/oracle` (`403 Permission denied`)
+
+Fix steps for Oracle repo push:
+```bash
+cd /home/manduong/.openclaw/workspace/oracle
+# Option A: add writable fork remote then push there
+# git remote add myfork https://github.com/<your-username>/oracle.git
+# git push myfork HEAD
+
+# Option B: keep local patch only and rely on project-level cache patcher script
+# scripts/patch_oracle_npx_cache.py
+```
+
+
